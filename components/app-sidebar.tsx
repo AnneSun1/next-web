@@ -1,13 +1,24 @@
 "use client"
 
-import { useEffect } from "react"
-import { usePathname } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/lib/hooks"
-import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
+import type * as React from "react"
+import { usePathname, useRouter } from "next/navigation"
+import {
+  Home,
+  Building2,
+  Mail,
+  CheckSquare,
+  Calendar,
+  BookOpen,
+  Users,
+  Settings,
+  User,
+  LogOut,
+  FileText,
+} from "lucide-react"
+
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -17,20 +28,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import {
-  Home,
-  Calendar,
-  Users,
-  Settings,
-  Building2,
-  MessageSquare,
-  BookOpen,
-  User,
-  CheckSquare,
-  Crown,
-  UserCheck,
-  Target,
-} from "lucide-react"
+import { useAppDispatch, useAppSelector } from "@/lib/hooks"
+import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
 
 const navigationItems = [
   {
@@ -46,34 +45,10 @@ const navigationItems = [
     key: "properties",
   },
   {
-    title: "Reservations",
-    url: "/reservations",
-    icon: Calendar,
-    key: "reservations",
-  },
-  {
-    title: "Users",
-    url: "/users",
-    icon: Users,
-    key: "users",
-  },
-  {
-    title: "Owners",
-    url: "/owners",
-    icon: Crown,
-    key: "owners",
-  },
-  {
-    title: "Guests",
-    url: "/guests",
-    icon: UserCheck,
-    key: "guests",
-  },
-  {
-    title: "Intents",
-    url: "/intents",
-    icon: Target,
-    key: "intents",
+    title: "Inbox",
+    url: "/inbox",
+    icon: Mail,
+    key: "inbox",
   },
   {
     title: "Tasks",
@@ -82,10 +57,10 @@ const navigationItems = [
     key: "tasks",
   },
   {
-    title: "Inbox",
-    url: "/inbox",
-    icon: MessageSquare,
-    key: "inbox",
+    title: "Reservations",
+    url: "/reservations",
+    icon: Calendar,
+    key: "reservations",
   },
   {
     title: "Guest Guide",
@@ -94,10 +69,10 @@ const navigationItems = [
     key: "guest-guide",
   },
   {
-    title: "Profile",
-    url: "/profile",
-    icon: User,
-    key: "profile",
+    title: "Users",
+    url: "/users",
+    icon: Users,
+    key: "users",
   },
   {
     title: "Settings",
@@ -105,58 +80,109 @@ const navigationItems = [
     icon: Settings,
     key: "settings",
   },
+  {
+    title: "Profile",
+    url: "/profile",
+    icon: User,
+    key: "profile",
+  },
 ]
 
-export function AppSidebar() {
+const bottomItems = [
+  {
+    title: "Logout",
+    url: "/logout",
+    icon: LogOut,
+    key: "logout",
+  },
+  {
+    title: "Tenants",
+    url: "/tenants",
+    icon: FileText,
+    key: "tenants",
+  },
+]
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const router = useRouter()
   const dispatch = useAppDispatch()
   const activeTab = useAppSelector((state) => state.navigation.activeTab)
-  const pathname = usePathname()
 
-  useEffect(() => {
-    const currentItem = navigationItems.find((item) => pathname.startsWith(item.url))
-    if (currentItem) {
-      dispatch(setActiveTab(currentItem.key))
-    }
-  }, [pathname, dispatch])
+  const handleNavigation = (url: string, key: string) => {
+    dispatch(setActiveTab(key))
+    router.push(url)
+  }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-background">
-      <SidebarHeader className="border-b border-border p-4">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-white" />
+    <Sidebar {...props} className="border-r border-sidebar-border">
+      <SidebarHeader className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold text-lg">
+            N
           </div>
-          <span className="font-semibold text-foreground group-data-[collapsible=icon]:hidden">Nova</span>
+          <div className="flex flex-col">
+            <span className="font-semibold text-sidebar-foreground text-lg">Nova Vacation</span>
+          </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+
+      <SidebarContent className="bg-sidebar">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70 text-xs font-medium uppercase tracking-wider px-3 py-2">
+            APPS & PAGES
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.key}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={activeTab === item.key}
-                    className="data-[active=true]:bg-purple-100 data-[active=true]:text-purple-700 dark:data-[active=true]:bg-purple-900/20 dark:data-[active=true]:text-purple-300"
-                  >
-                    <a href={item.url} className="flex items-center space-x-2">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            <SidebarMenu className="space-y-1 px-3">
+              {navigationItems.map((item) => {
+                const isActive = pathname === item.url || activeTab === item.key
+                return (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton
+                      onClick={() => handleNavigation(item.url, item.key)}
+                      className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      }`}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="border-t border-border p-4">
-        <div className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Nova Vacation Rental Management
+
+        <div className="mt-auto">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1 px-3 pb-4">
+                {bottomItems.map((item) => {
+                  const isActive = pathname === item.url || activeTab === item.key
+                  return (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation(item.url, item.key)}
+                        className={`w-full justify-start gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
+                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                        }`}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-medium">{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </div>
-      </SidebarFooter>
+      </SidebarContent>
       <SidebarRail />
     </Sidebar>
   )
