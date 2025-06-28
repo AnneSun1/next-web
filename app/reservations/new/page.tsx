@@ -157,9 +157,10 @@ export default function NewReservationPage() {
                 <Label htmlFor="checkIn">Check-in Date *</Label>
                 <Input
                   id="checkIn"
-                  type="date"
+                  type="text"
                   value={formData.checkIn}
                   onChange={(e) => handleInputChange("checkIn", e.target.value)}
+                  placeholder="YYYY-MM-DD"
                   required
                 />
               </div>
@@ -167,9 +168,10 @@ export default function NewReservationPage() {
                 <Label htmlFor="checkOut">Check-out Date *</Label>
                 <Input
                   id="checkOut"
-                  type="date"
+                  type="text"
                   value={formData.checkOut}
                   onChange={(e) => handleInputChange("checkOut", e.target.value)}
+                  placeholder="YYYY-MM-DD"
                   required
                 />
               </div>

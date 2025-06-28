@@ -368,10 +368,11 @@ export default function ReservationDetailPage({ params }: { params: { "reservati
                       </Label>
                       <Input
                         id="checkInDate"
-                        type="date"
+                        type="text"
                         value={editForm?.checkInDate || ""}
                         onChange={(e) => handleInputChange("checkInDate", e.target.value)}
                         className={`bg-muted border-border text-foreground ${errors.checkInDate ? "border-red-500" : ""}`}
+                        placeholder="YYYY-MM-DD"
                       />
                       {errors.checkInDate && <p className="text-red-500 text-sm mt-1">{errors.checkInDate}</p>}
                     </div>
@@ -381,10 +382,11 @@ export default function ReservationDetailPage({ params }: { params: { "reservati
                       </Label>
                       <Input
                         id="checkOutDate"
-                        type="date"
+                        type="text"
                         value={editForm?.checkOutDate || ""}
                         onChange={(e) => handleInputChange("checkOutDate", e.target.value)}
                         className={`bg-muted border-border text-foreground ${errors.checkOutDate ? "border-red-500" : ""}`}
+                        placeholder="YYYY-MM-DD"
                       />
                       {errors.checkOutDate && <p className="text-red-500 text-sm mt-1">{errors.checkOutDate}</p>}
                     </div>

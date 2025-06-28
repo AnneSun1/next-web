@@ -272,10 +272,11 @@ export function ReservationEditModal({
                   </Label>
                   <Input
                     id="check_in"
-                    type="date"
+                    type="text"
                     value={formData.check_in}
                     onChange={(e) => handleInputChange("check_in", e.target.value)}
                     className="bg-muted border-border text-foreground"
+                    placeholder="YYYY-MM-DD"
                   />
                   {errors.check_in && <p className="text-red-400 text-sm mt-1">{errors.check_in}</p>}
                 </div>
@@ -286,10 +287,11 @@ export function ReservationEditModal({
                   </Label>
                   <Input
                     id="check_out"
-                    type="date"
+                    type="text"
                     value={formData.check_out}
                     onChange={(e) => handleInputChange("check_out", e.target.value)}
                     className="bg-muted border-border text-foreground"
+                    placeholder="YYYY-MM-DD"
                   />
                   {errors.check_out && <p className="text-red-400 text-sm mt-1">{errors.check_out}</p>}
                 </div>
