@@ -1,123 +1,218 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
+import { Plus, Calendar, Users, DollarSign, User, Edit, FileDown, X } from "lucide-react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAppDispatch } from "@/lib/hooks"
-import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
-import { useReservations } from "@/hooks/useReservations"
-import { Button } from "@/components/ui/button"
+
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableFilter,
+  type DataTableView,
+  type BulkAction,
+} from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
-import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
-import { PageHeader } from "@/components/ui/page-header"
-import { ReservationViewModal } from "@/components/modals/reservation-view-modal"
-import { ReservationEditModal } from "@/components/modals/reservation-edit-modal"
-import { Plus, Eye, Edit, Calendar, MapPin, Users, DollarSign } from "lucide-react"
-import type { Reservation } from "@/types/reservation"
+import { toast } from "@/components/ui/use-toast"
+import { reservations, type Reservation } from "@/data/reservations"
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "confirmed":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+    case "pending":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800"
+    case "cancelled":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+    case "completed":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+    case "checked_in":
+      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800"
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800"
+  }
+}
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+  }).format(amount)
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+const columns: DataTableColumn<Reservation>[] = [
+  {
+    key: "guest",
+    header: "Guest & Property",
+    width: "w-64",
+    render: (reservation) => (
+      <div className="space-y-1">
+        <div className="flex items-center space-x-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium text-foreground">{reservation.guestName}</span>
+        </div>
+        <div className="text-sm text-muted-foreground">{reservation.guestEmail}</div>
+        <div className="text-sm font-medium text-foreground">{reservation.propertyName}</div>
+      </div>
+    ),
+  },
+  {
+    key: "dates",
+    header: "Dates",
+    width: "w-40",
+    render: (reservation) => (
+      <div className="space-y-1">
+        <div className="flex items-center space-x-2 text-sm">
+          <Calendar className="h-3 w-3 text-muted-foreground" />
+          <span>{formatDate(reservation.checkInDate)}</span>
+        </div>
+        <div className="text-sm text-muted-foreground">to {formatDate(reservation.checkOutDate)}</div>
+        <div className="text-xs text-muted-foreground">{reservation.nights} nights</div>
+      </div>
+    ),
+  },
+  {
+    key: "guests",
+    header: "Guests",
+    width: "w-24",
+    render: (reservation) => (
+      <div className="flex items-center space-x-1">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">{reservation.guests}</span>
+      </div>
+    ),
+  },
+  {
+    key: "amount",
+    header: "Amount",
+    width: "w-32",
+    render: (reservation) => (
+      <div className="space-y-1">
+        <div className="flex items-center space-x-1">
+          <DollarSign className="h-3 w-3 text-muted-foreground" />
+          <span className="font-medium">{formatCurrency(reservation.totalAmount)}</span>
+        </div>
+        <div className="text-xs text-muted-foreground capitalize">{reservation.paymentStatus}</div>
+      </div>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    width: "w-32",
+    render: (reservation) => (
+      <Badge variant="outline" className={getStatusColor(reservation.status)}>
+        {reservation.status.replace("_", " ").toUpperCase()}
+      </Badge>
+    ),
+  },
+  {
+    key: "source",
+    header: "Source",
+    width: "w-24",
+    render: (reservation) => <div className="text-sm capitalize">{reservation.source.replace("_", " ")}</div>,
+  },
+]
 
 export default function ReservationsPage() {
-  const dispatch = useAppDispatch()
-  const router = useRouter()
-  const {
-    reservations,
-    loading,
-    error,
-    fetchReservations,
-    selectedReservationIds,
-    setSelectedIds,
-    selectAll,
-    clearSelection,
-    isAllSelected,
-  } = useReservations()
-
-  const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [filters, setFilters] = useState<Record<string, string>>({
     status: "",
-    property: "",
-    checkInDate: "",
+    paymentStatus: "",
+    source: "",
   })
 
-  useEffect(() => {
-    dispatch(setActiveTab("reservations"))
-    // Fetch reservations when component mounts
-    fetchReservations()
-  }, [dispatch, fetchReservations])
+  const router = useRouter()
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { color: string; text: string }> = {
-      confirmed: { color: "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30", text: "Confirmed" },
-      pending: { color: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30", text: "Pending" },
-      cancelled: { color: "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30", text: "Cancelled" },
-      completed: { color: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30", text: "Completed" },
-    }
+  const [currentView, setCurrentView] = useState<DataTableView | undefined>(undefined)
 
-    const config = statusConfig[status.toLowerCase()] || statusConfig.pending
-    return <Badge className={`${config.color} border`}>{config.text}</Badge>
+  const views: DataTableView[] = [
+    {
+      id: "all",
+      name: "All Reservations",
+      filters: {},
+    },
+    {
+      id: "confirmed",
+      name: "Confirmed",
+      filters: { status: "confirmed" },
+    },
+    {
+      id: "pending",
+      name: "Pending Approval",
+      filters: { status: "pending" },
+    },
+    {
+      id: "completed",
+      name: "Completed Stays",
+      filters: { status: "completed" },
+    },
+    {
+      id: "checked-in",
+      name: "Currently Checked In",
+      filters: { status: "checked_in" },
+    },
+  ]
+
+  const bulkActions: BulkAction[] = [
+    {
+      label: "Update Status",
+      icon: Edit,
+      onClick: (selectedIds) => {
+        console.log("Update status for:", selectedIds)
+      },
+    },
+    {
+      label: "Export Selected",
+      icon: FileDown,
+      onClick: (selectedIds) => {
+        console.log("Export:", selectedIds)
+      },
+    },
+    {
+      label: "Cancel Reservations",
+      icon: X,
+      variant: "destructive",
+      onClick: (selectedIds) => {
+        console.log("Cancel:", selectedIds)
+      },
+    },
+  ]
+
+  const handleViewChange = (view: DataTableView) => {
+    setCurrentView(view)
+    // Apply the view's filters
+    setFilters(view.filters)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
-  const calculateNights = (checkIn: string, checkOut: string) => {
-    const start = new Date(checkIn)
-    const end = new Date(checkOut)
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
-
-  const handleRowClick = (reservation: Reservation) => {
-    router.push(`/reservations/${reservation.id}`)
+  const handleCreateView = () => {
+    console.log("Creating new view...")
   }
 
   const handleNewReservation = () => {
-    router.push("/reservations/new")
-  }
-
-  const handleViewReservation = (reservation: Reservation, event: React.MouseEvent) => {
-    event.stopPropagation()
-    setSelectedReservation(reservation)
-    setViewModalOpen(true)
-  }
-
-  const handleEditReservation = (reservation: Reservation, event: React.MouseEvent) => {
-    event.stopPropagation()
-    setSelectedReservation(reservation)
-    setEditModalOpen(true)
+    toast({
+      title: "New Reservation",
+      description: "Implement new reservation logic here.",
+    })
   }
 
   const handleFilterChange = (filterKey: string, value: string) => {
     setFilters((prev) => ({ ...prev, [filterKey]: value }))
   }
 
-  const handleExport = () => {
-    console.log("Exporting reservations data...")
+  const handleSelectionChange = (selectedIds: string[], selectedItems: Reservation[]) => {
+    console.log("Selection changed:", selectedIds, selectedItems)
   }
 
-  const handleShare = () => {
-    console.log("Sharing reservations data...")
-  }
-
-  const handleViewsClick = () => {
-    console.log("Opening views...")
-  }
-
-  const handleSaveView = () => {
-    console.log("Saving current view...")
+  const handleRowClick = (reservation: Reservation) => {
+    router.push(`/reservations/${reservation.id}`)
   }
 
   const tableFilters: DataTableFilter[] = [
@@ -131,218 +226,64 @@ export default function ReservationsPage() {
         { value: "pending", label: "Pending" },
         { value: "cancelled", label: "Cancelled" },
         { value: "completed", label: "Completed" },
+        { value: "checked_in", label: "Checked In" },
       ],
     },
     {
-      key: "property",
-      label: "Property",
-      type: "text",
-      value: filters.property,
-      placeholder: "Filter by property name",
+      key: "paymentStatus",
+      label: "Payment",
+      type: "select",
+      value: filters.paymentStatus,
+      options: [
+        { value: "paid", label: "Paid" },
+        { value: "pending", label: "Pending" },
+        { value: "partial", label: "Partial" },
+        { value: "refunded", label: "Refunded" },
+      ],
     },
     {
-      key: "checkInDate",
-      label: "Check-in Date",
-      type: "date",
-      value: filters.checkInDate,
-      placeholder: "Filter by check-in date",
+      key: "source",
+      label: "Source",
+      type: "select",
+      value: filters.source,
+      options: [
+        { value: "direct", label: "Direct" },
+        { value: "airbnb", label: "Airbnb" },
+        { value: "vrbo", label: "VRBO" },
+        { value: "booking.com", label: "Booking.com" },
+        { value: "expedia", label: "Expedia" },
+      ],
     },
   ]
-
-  const columns: DataTableColumn<Reservation>[] = [
-    {
-      key: "guest",
-      header: "Guest",
-      width: "w-64",
-      render: (reservation) => (
-        <div className="space-y-1">
-          <div className="font-medium text-foreground">{reservation.guest_full_name}</div>
-          <div className="text-sm text-muted-foreground">{reservation.guest?.email || "No email"}</div>
-          <div className="text-xs text-muted-foreground">ID: {reservation.id}</div>
-        </div>
-      ),
-    },
-    {
-      key: "property",
-      header: "Property",
-      width: "w-48",
-      render: (reservation) => (
-        <div className="flex items-center space-x-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">{reservation.listing?.name || `Property ${reservation.listing_id}`}</span>
-        </div>
-      ),
-    },
-    {
-      key: "dates",
-      header: "Dates",
-      width: "w-48",
-      render: (reservation) => (
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">
-              {formatDate(reservation.check_in)} - {formatDate(reservation.check_out)}
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground">{reservation.nights_count} nights</div>
-        </div>
-      ),
-    },
-    {
-      key: "guests",
-      header: "Guests",
-      width: "w-24",
-      render: (reservation) => (
-        <div className="flex items-center space-x-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">{reservation.guestscount}</span>
-        </div>
-      ),
-    },
-    {
-      key: "total",
-      header: "Total",
-      width: "w-32",
-      render: (reservation) => (
-        <div className="flex items-center space-x-2">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium text-foreground">{formatCurrency(reservation.amount || 0)}</span>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      width: "w-32",
-      render: (reservation) => getStatusBadge(reservation.reservation_status_code),
-    },
-    // {
-    //   key: "actions",
-    //   header: "Actions",
-    //   width: "w-24",
-    //   render: (reservation) => (
-    //     <div className="flex items-center space-x-1">
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => handleViewReservation(reservation, e)}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Eye className="h-4 w-4" />
-    //       </Button>
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => handleEditReservation(reservation, e)}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Edit className="h-4 w-4" />
-    //       </Button>
-    //     </div>
-    //   ),
-    // },
-  ]
-
-  const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedIds(selectedIds.map((id) => Number.parseInt(id)))
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      selectAll()
-    } else {
-      clearSelection()
-    }
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 bg-background min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Error Loading Reservations</h1>
-          <p className="text-muted-foreground">{error}</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="p-8 bg-background min-h-screen">
-      <PageHeader
-        title="Reservations"
-        description="Manage guest bookings and reservations"
-        buttonText="New Reservation"
-        buttonIcon={Plus}
-        onButtonClick={handleNewReservation}
-      />
-
-      {selectedReservationIds.length > 0 && (
-        <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
-          <span className="text-sm text-foreground">{selectedReservationIds.length} reservation(s) selected</span>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={clearSelection}
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Update Status
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Export
-            </Button>
-          </div>
-        </div>
-      )}
-
       <DataTable
-        data={reservations}
+        title="Reservations"
+        views={views}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        onCreateView={handleCreateView}
+        primaryAction={{
+          text: "New Reservation",
+          icon: Plus,
+          onClick: handleNewReservation,
+        }}
         columns={columns}
-        loading={loading.list}
+        data={reservations}
         searchable
         searchPlaceholder="Search reservations..."
         selectable
-        selectedItems={selectedReservationIds.map((id) => String(id))}
+        bulkActions={bulkActions}
         onSelectionChange={handleSelectionChange}
-        onSelectAll={handleSelectAll}
-        isAllSelected={isAllSelected}
-        onRowClick={handleRowClick}
-        emptyMessage="No reservations found"
-        emptyDescription="Create your first reservation to get started"
         filters={tableFilters}
         onFilterChange={handleFilterChange}
-        onExport={handleExport}
-        onShare={handleShare}
-        onViewsClick={handleViewsClick}
-        onSaveView={handleSaveView}
+        onExport={() => console.log("Export all")}
+        onShare={() => console.log("Share")}
+        onViewsClick={() => console.log("Views")}
+        onSaveView={() => console.log("Save view")}
+        onRowClick={handleRowClick}
       />
-
-      {selectedReservation && (
-        <>
-          <ReservationViewModal
-            reservation={selectedReservation}
-            open={viewModalOpen}
-            onOpenChange={setViewModalOpen}
-          />
-          <ReservationEditModal
-            reservation={selectedReservation}
-            open={editModalOpen}
-            onOpenChange={setEditModalOpen}
-          />
-        </>
-      )}
     </div>
   )
 }

@@ -6,9 +6,8 @@ import { useAppDispatch } from "@/lib/hooks"
 import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
-import { PageHeader } from "@/components/ui/page-header"
-import { Plus, Eye, Edit, Mail, Phone, Crown, Building2 } from "lucide-react"
+import { DataTable, type DataTableColumn, type DataTableFilter, type DataTableView } from "@/components/ui/data-table"
+import { Plus, Mail, Phone, Crown, Building2 } from "lucide-react"
 
 interface Owner {
   id: string
@@ -93,11 +92,35 @@ export default function OwnersPage() {
   const [loading] = useState(false)
   const [selectedOwners, setSelectedOwners] = useState<string[]>([])
   const [isAllSelected, setIsAllSelected] = useState(false)
+  const [currentView, setCurrentView] = useState<DataTableView | undefined>(undefined)
   const [filters, setFilters] = useState<Record<string, string>>({
     status: "",
     properties: "",
     joinDate: "",
   })
+
+  const views: DataTableView[] = [
+    {
+      id: "all",
+      name: "All Owners",
+      filters: {},
+    },
+    {
+      id: "active",
+      name: "Active Owners",
+      filters: { status: "active" },
+    },
+    {
+      id: "pending",
+      name: "Pending Approval",
+      filters: { status: "pending" },
+    },
+    {
+      id: "high-value",
+      name: "High Value (5+ Properties)",
+      filters: { properties: "5" },
+    },
+  ]
 
   useEffect(() => {
     dispatch(setActiveTab("owners"))
@@ -156,6 +179,16 @@ export default function OwnersPage() {
 
   const handleSaveView = () => {
     console.log("Saving current view...")
+  }
+
+  const handleViewChange = (view: DataTableView) => {
+    setCurrentView(view)
+    // Apply the view's filters
+    setFilters(view.filters)
+  }
+
+  const handleCreateView = () => {
+    console.log("Creating new view...")
   }
 
   const tableFilters: DataTableFilter[] = [
@@ -247,37 +280,6 @@ export default function OwnersPage() {
       width: "w-32",
       render: (owner) => getStatusBadge(owner.status),
     },
-    // {
-    //   key: "actions",
-    //   header: "Actions",
-    //   width: "w-24",
-    //   render: (owner) => (
-    //     <div className="flex items-center space-x-1">
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => {
-    //           e.stopPropagation()
-    //           console.log("View owner:", owner.id)
-    //         }}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Eye className="h-4 w-4" />
-    //       </Button>
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => {
-    //           e.stopPropagation()
-    //           console.log("Edit owner:", owner.id)
-    //         }}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Edit className="h-4 w-4" />
-    //       </Button>
-    //     </div>
-    //   ),
-    // },
   ]
 
   const handleSelectionChange = (selectedIds: string[]) => {
@@ -297,14 +299,6 @@ export default function OwnersPage() {
 
   return (
     <div className="p-8 bg-background min-h-screen">
-      <PageHeader
-        title="Owners"
-        description="Manage property owners and partnerships"
-        buttonText="Add Owner"
-        buttonIcon={Plus}
-        onButtonClick={handleAddOwner}
-      />
-
       {selectedOwners.length > 0 && (
         <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
           <span className="text-sm text-foreground">{selectedOwners.length} owner(s) selected</span>
@@ -336,6 +330,16 @@ export default function OwnersPage() {
       )}
 
       <DataTable
+        title="Owners"
+        views={views}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        onCreateView={handleCreateView}
+        primaryAction={{
+          text: "Add Owner",
+          icon: Plus,
+          onClick: handleAddOwner,
+        }}
         data={owners}
         columns={columns}
         loading={loading}
@@ -353,7 +357,6 @@ export default function OwnersPage() {
         onFilterChange={handleFilterChange}
         onExport={handleExport}
         onShare={handleShare}
-        onViewsClick={handleViewsClick}
         onSaveView={handleSaveView}
       />
     </div>

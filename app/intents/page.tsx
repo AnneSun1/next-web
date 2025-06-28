@@ -353,7 +353,6 @@ export default function IntentsPage() {
           onFilterChange={handleFilterChange}
           onExport={handleExport}
           onShare={handleShare}
-          onViewsClick={handleViewsClick}
           onSaveView={handleSaveView}
         />
       </div>

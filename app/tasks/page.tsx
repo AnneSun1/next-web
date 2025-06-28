@@ -4,169 +4,124 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
-import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableFilter,
+  type DataTableView,
+  type BulkAction,
+} from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { CalendarDays, Clock, MapPin, Plus } from "lucide-react"
-import { TASK_STATUS, TASK_PRIORITY, TASK_TYPE, type Task } from "@/types/task"
-import { PageHeader } from "@/components/ui/page-header"
+import { CalendarDays, Clock, MapPin, Plus, CheckSquare, UserCheck, FileDown } from "lucide-react"
 
 // Mock data for tasks
+interface Task {
+  id: string
+  title: string
+  description: string
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "ON_HOLD"
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+  taskType: "CLEANING" | "MAINTENANCE" | "INSPECTION" | "GUEST_SERVICE" | "ADMINISTRATIVE"
+  assigneeId?: string
+  listingNickname: string
+  plannedStartAt: string
+  plannedDurationMin: number
+  dueAt: string
+}
+
 const mockTasks: Task[] = [
   {
     id: "1",
-    tenantId: "1",
     title: "Deep Clean Kitchen",
     description: "Complete deep cleaning of kitchen including appliances, cabinets, and floors",
-    status: TASK_STATUS.IN_PROGRESS,
-    assignmentStatusCode: "ASSIGNED",
+    status: "IN_PROGRESS",
+    priority: "HIGH",
+    taskType: "CLEANING",
     assigneeId: "user-1",
-    supervisorId: "user-2",
-    requestedById: "user-3",
-    taskTypeCode: TASK_TYPE.CLEANING,
-    subcategoryCode: "DEEP_CLEAN",
-    priority: TASK_PRIORITY.HIGH,
-    taskSourceCode: "MANUAL",
-    listingId: "listing-1",
-    reservationId: "res-1",
+    listingNickname: "Downtown Loft",
     plannedStartAt: "2024-01-15T09:00:00Z",
     plannedDurationMin: 180,
     dueAt: "2024-01-15T15:00:00Z",
-    actualStart: "2024-01-15T09:15:00Z",
-    isPaused: false,
-    createdAt: "2024-01-14T10:00:00Z",
-    updatedAt: "2024-01-15T09:15:00Z",
-    comments: [],
-    attachments: [],
-    listingNickname: "Downtown Loft",
-    listingFullAddress: "123 Main St, City, State 12345",
   },
   {
     id: "2",
-    tenantId: "1",
     title: "Fix Leaky Faucet",
     description: "Repair bathroom faucet that's been dripping",
-    status: TASK_STATUS.PENDING,
-    assignmentStatusCode: "UNASSIGNED",
-    taskTypeCode: TASK_TYPE.MAINTENANCE,
-    subcategoryCode: "PLUMBING",
-    priority: TASK_PRIORITY.MEDIUM,
-    taskSourceCode: "GUEST_REPORT",
-    listingId: "listing-2",
-    reservationId: "res-2",
+    status: "PENDING",
+    priority: "MEDIUM",
+    taskType: "MAINTENANCE",
+    listingNickname: "Seaside Villa",
     plannedStartAt: "2024-01-16T10:00:00Z",
     plannedDurationMin: 60,
     dueAt: "2024-01-16T12:00:00Z",
-    createdAt: "2024-01-14T14:30:00Z",
-    updatedAt: "2024-01-14T14:30:00Z",
-    comments: [],
-    attachments: [],
-    listingNickname: "Seaside Villa",
-    listingFullAddress: "456 Ocean Ave, Beach City, State 67890",
   },
   {
     id: "3",
-    tenantId: "1",
     title: "Property Inspection",
     description: "Monthly property inspection checklist",
-    status: TASK_STATUS.COMPLETED,
-    assignmentStatusCode: "COMPLETED",
+    status: "COMPLETED",
+    priority: "LOW",
+    taskType: "INSPECTION",
     assigneeId: "user-4",
-    supervisorId: "user-2",
-    taskTypeCode: TASK_TYPE.INSPECTION,
-    priority: TASK_PRIORITY.LOW,
-    taskSourceCode: "SCHEDULED",
-    listingId: "listing-3",
+    listingNickname: "Mountain Cabin",
     plannedStartAt: "2024-01-10T14:00:00Z",
     plannedDurationMin: 120,
     dueAt: "2024-01-10T16:00:00Z",
-    actualStart: "2024-01-10T14:00:00Z",
-    actualEnd: "2024-01-10T15:45:00Z",
-    actualDurationMin: "105",
-    feedbackRating: 5,
-    feedBackNote: "Excellent work, very thorough",
-    createdAt: "2024-01-09T09:00:00Z",
-    updatedAt: "2024-01-10T15:45:00Z",
-    comments: [],
-    attachments: [],
-    listingNickname: "Mountain Cabin",
-    listingFullAddress: "789 Pine Ridge Rd, Mountain View, State 13579",
   },
   {
     id: "4",
-    tenantId: "1",
     title: "Guest Welcome Package",
     description: "Prepare and deliver welcome package for incoming guests",
-    status: TASK_STATUS.PENDING,
-    assignmentStatusCode: "UNASSIGNED",
-    taskTypeCode: TASK_TYPE.GUEST_SERVICE,
-    priority: TASK_PRIORITY.URGENT,
-    taskSourceCode: "RESERVATION",
-    listingId: "listing-1",
-    reservationId: "res-3",
+    status: "PENDING",
+    priority: "URGENT",
+    taskType: "GUEST_SERVICE",
+    listingNickname: "Downtown Loft",
     plannedStartAt: "2024-01-17T15:00:00Z",
     plannedDurationMin: 30,
     dueAt: "2024-01-17T16:00:00Z",
-    createdAt: "2024-01-16T09:00:00Z",
-    updatedAt: "2024-01-16T09:00:00Z",
-    comments: [],
-    attachments: [],
-    listingNickname: "Downtown Loft",
-    listingFullAddress: "123 Main St, City, State 12345",
   },
   {
     id: "5",
-    tenantId: "1",
     title: "Update Property Listing",
     description: "Update photos and description for summer season",
-    status: TASK_STATUS.ON_HOLD,
-    assignmentStatusCode: "ASSIGNED",
+    status: "ON_HOLD",
+    priority: "LOW",
+    taskType: "ADMINISTRATIVE",
     assigneeId: "user-1",
-    supervisorId: "user-2",
-    taskTypeCode: TASK_TYPE.ADMINISTRATIVE,
-    priority: TASK_PRIORITY.LOW,
-    taskSourceCode: "MANUAL",
-    listingId: "listing-4",
+    listingNickname: "Beach House",
     plannedStartAt: "2024-01-20T09:00:00Z",
     plannedDurationMin: 240,
     dueAt: "2024-01-20T17:00:00Z",
-    pausedAt: "2024-01-16T14:00:00Z",
-    createdAt: "2024-01-15T10:00:00Z",
-    updatedAt: "2024-01-16T14:00:00Z",
-    comments: [],
-    attachments: [],
-    listingNickname: "Beach House",
-    listingFullAddress: "321 Coastal Dr, Seaside, State 24680",
   },
 ]
 
-const getStatusColor = (status: TASK_STATUS) => {
+const getStatusColor = (status: string) => {
   switch (status) {
-    case TASK_STATUS.PENDING:
+    case "PENDING":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800"
-    case TASK_STATUS.IN_PROGRESS:
+    case "IN_PROGRESS":
       return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
-    case TASK_STATUS.COMPLETED:
+    case "COMPLETED":
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-    case TASK_STATUS.CANCELLED:
+    case "CANCELLED":
       return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
-    case TASK_STATUS.ON_HOLD:
+    case "ON_HOLD":
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800"
   }
 }
 
-const getPriorityColor = (priority: TASK_PRIORITY) => {
+const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case TASK_PRIORITY.LOW:
+    case "LOW":
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-    case TASK_PRIORITY.MEDIUM:
+    case "MEDIUM":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800"
-    case TASK_PRIORITY.HIGH:
+    case "HIGH":
       return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800"
-    case TASK_PRIORITY.URGENT:
+    case "URGENT":
       return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800"
@@ -186,14 +141,67 @@ const formatDate = (dateString?: string) => {
 export default function TasksPage() {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([])
-  const [isAllSelected, setIsAllSelected] = useState(false)
+  const [tasks] = useState<Task[]>(mockTasks)
+  const [loading] = useState(false)
+  const [currentView, setCurrentView] = useState<DataTableView | undefined>(undefined)
   const [filters, setFilters] = useState<Record<string, string>>({
     status: "",
     priority: "",
-    taskTypeCode: "",
+    taskType: "",
     assigneeId: "",
   })
+
+  const views: DataTableView[] = [
+    {
+      id: "all",
+      name: "All Tasks",
+      filters: {},
+    },
+    {
+      id: "pending",
+      name: "Pending Tasks",
+      filters: { status: "PENDING" },
+    },
+    {
+      id: "in-progress",
+      name: "In Progress",
+      filters: { status: "IN_PROGRESS" },
+    },
+    {
+      id: "urgent",
+      name: "Urgent Tasks",
+      filters: { priority: "URGENT" },
+    },
+    {
+      id: "my-tasks",
+      name: "My Tasks",
+      filters: { assigneeId: "user-1" },
+    },
+  ]
+
+  const bulkActions: BulkAction[] = [
+    {
+      label: "Mark Complete",
+      icon: CheckSquare,
+      onClick: (selectedIds) => {
+        console.log("Mark complete:", selectedIds)
+      },
+    },
+    {
+      label: "Assign Tasks",
+      icon: UserCheck,
+      onClick: (selectedIds) => {
+        console.log("Assign tasks:", selectedIds)
+      },
+    },
+    {
+      label: "Export Selected",
+      icon: FileDown,
+      onClick: (selectedIds) => {
+        console.log("Export:", selectedIds)
+      },
+    },
+  ]
 
   useEffect(() => {
     dispatch(setActiveTab("tasks"))
@@ -211,41 +219,19 @@ export default function TasksPage() {
     router.push("tasks/new")
   }
 
-  const handleExport = () => {
-    console.log("Exporting tasks data...")
+  const handleViewChange = (view: DataTableView) => {
+    setCurrentView(view)
+    setFilters(view.filters)
   }
 
-  const handleShare = () => {
-    console.log("Sharing tasks data...")
-  }
-
-  const handleViewsClick = () => {
-    console.log("Opening views...")
-  }
-
-  const handleSaveView = () => {
-    console.log("Saving current view...")
-  }
-
-  const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedTasks(selectedIds)
-    setIsAllSelected(selectedIds.length === mockTasks.length && mockTasks.length > 0)
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedTasks(mockTasks.map((task) => task.id))
-      setIsAllSelected(true)
-    } else {
-      setSelectedTasks([])
-      setIsAllSelected(false)
-    }
+  const handleCreateView = () => {
+    console.log("Creating new view...")
   }
 
   const tableFilters: DataTableFilter[] = [
     {
       key: "status",
-      label: "",
+      label: "Status",
       type: "select",
       value: filters.status,
       options: [
@@ -258,7 +244,7 @@ export default function TasksPage() {
     },
     {
       key: "priority",
-      label: "",
+      label: "Priority",
       type: "select",
       value: filters.priority,
       options: [
@@ -269,28 +255,16 @@ export default function TasksPage() {
       ],
     },
     {
-      key: "taskTypeCode",
-      label: "",
+      key: "taskType",
+      label: "Type",
       type: "select",
-      value: filters.taskTypeCode,
+      value: filters.taskType,
       options: [
         { value: "CLEANING", label: "Cleaning" },
         { value: "MAINTENANCE", label: "Maintenance" },
         { value: "INSPECTION", label: "Inspection" },
         { value: "GUEST_SERVICE", label: "Guest Service" },
         { value: "ADMINISTRATIVE", label: "Administrative" },
-      ],
-    },
-    {
-      key: "assigneeId",
-      label: "",
-      type: "select",
-      value: filters.assigneeId,
-      options: [
-        { value: "user-1", label: "User 1" },
-        { value: "user-2", label: "User 2" },
-        { value: "user-3", label: "User 3" },
-        { value: "user-4", label: "User 4" },
       ],
     },
   ]
@@ -331,7 +305,7 @@ export default function TasksPage() {
     {
       key: "type",
       header: "Type",
-      render: (task) => <div className="text-sm">{task.taskTypeCode?.replace("_", " ")}</div>,
+      render: (task) => <div className="text-sm">{task.taskType?.replace("_", " ")}</div>,
     },
     {
       key: "assignee",
@@ -374,64 +348,32 @@ export default function TasksPage() {
 
   return (
     <div className="p-8 bg-background min-h-screen">
-
-      <PageHeader
-        title="Tasks"
-        description="Manage and track all property tasks"
-        buttonText="Create Task"
-        buttonIcon={Plus}
-        onButtonClick={handleAddTask}
-        />
-
-      {selectedTasks.length > 0 && (
-        <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
-          <span className="text-sm text-foreground">{selectedTasks.length} task(s) selected</span>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSelectedTasks([])}
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Update Status
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Assign Tasks
-            </Button>
-          </div>
-        </div>
-      )}
-
       <DataTable
-        data={mockTasks}
+        title="Tasks"
+        views={views}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        onCreateView={handleCreateView}
+        primaryAction={{
+          text: "Create Task",
+          icon: Plus,
+          onClick: handleAddTask,
+        }}
+        data={tasks}
         columns={columns}
+        loading={loading}
         searchable
         searchPlaceholder="Search tasks..."
         selectable
-        selectedItems={selectedTasks}
-        onSelectionChange={handleSelectionChange}
-        onSelectAll={handleSelectAll}
-        isAllSelected={isAllSelected}
+        bulkActions={bulkActions}
         onRowClick={handleTaskClick}
         emptyMessage="No tasks found"
         emptyDescription="Create your first task to get started"
         filters={tableFilters}
         onFilterChange={handleFilterChange}
-        onExport={handleExport}
-        onShare={handleShare}
-        onViewsClick={handleViewsClick}
-        onSaveView={handleSaveView}
+        onExport={() => console.log("Export all")}
+        onShare={() => console.log("Share")}
+        onSaveView={() => console.log("Save view")}
       />
     </div>
   )

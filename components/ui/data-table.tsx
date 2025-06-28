@@ -2,19 +2,48 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Download, Share2, Eye, Bookmark, ChevronLeft, ChevronRight, Filter } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Search,
+  Download,
+  Share2,
+  Eye,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  ChevronDown,
+  Check,
+  Plus,
+  Columns,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  List,
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu"
 
 export interface DataTableColumn<T> {
   key: string
   header: string
   width?: string
   render: (item: T) => React.ReactNode
+  sortable?: boolean
+  filterable?: boolean
 }
 
 export interface DataTableFilter {
@@ -26,6 +55,30 @@ export interface DataTableFilter {
   placeholder?: string
 }
 
+export interface DataTableView {
+  id: string
+  name: string
+  filters: Record<string, string>
+}
+
+export interface BulkAction {
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  onClick: (selectedIds: string[]) => void
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost"
+}
+
+export interface DataTableSort {
+  key: string
+  direction: "asc" | "desc"
+}
+
+export interface DataTablePagination {
+  page: number
+  pageSize: number
+  total: number
+}
+
 interface DataTableProps<T> {
   data: T[]
   columns: DataTableColumn<T>[]
@@ -33,10 +86,6 @@ interface DataTableProps<T> {
   searchable?: boolean
   searchPlaceholder?: string
   selectable?: boolean
-  selectedItems?: string[]
-  onSelectionChange?: (selectedIds: string[]) => void
-  onSelectAll?: (checked: boolean) => void
-  isAllSelected?: boolean
   onRowClick?: (item: T) => void
   emptyMessage?: string
   emptyDescription?: string
@@ -46,6 +95,36 @@ interface DataTableProps<T> {
   onShare?: () => void
   onViewsClick?: () => void
   onSaveView?: () => void
+  // New view-related props
+  title?: string
+  views?: DataTableView[]
+  currentView?: DataTableView
+  onViewChange?: (view: DataTableView) => void
+  onCreateView?: () => void
+  primaryAction?: {
+    text: string
+    icon?: React.ComponentType<{ className?: string }>
+    onClick: () => void
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  }
+  // New bulk action props
+  bulkActions?: BulkAction[]
+  onSelectionChange?: (selectedIds: string[], selectedItems: T[]) => void
+  // Server-side operation props
+  serverSide?: boolean
+  sorting?: DataTableSort[]
+  onSortingChange?: (sorting: DataTableSort[]) => void
+  pagination?: DataTablePagination
+  onPaginationChange?: (pagination: DataTablePagination) => void
+  // Search props
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  // Column visibility
+  columnVisibility?: Record<string, boolean>
+  onColumnVisibilityChange?: (visibility: Record<string, boolean>) => void
+  // Error handling
+  error?: string
+  onRetry?: () => void
 }
 
 export function DataTable<T extends { id: string }>({
@@ -55,10 +134,6 @@ export function DataTable<T extends { id: string }>({
   searchable = false,
   searchPlaceholder = "Search...",
   selectable = false,
-  selectedItems = [],
-  onSelectionChange,
-  onSelectAll,
-  isAllSelected = false,
   onRowClick,
   emptyMessage = "No data found",
   emptyDescription = "No items to display",
@@ -68,22 +143,117 @@ export function DataTable<T extends { id: string }>({
   onShare,
   onViewsClick,
   onSaveView,
+  title,
+  views = [],
+  currentView,
+  onViewChange,
+  onCreateView,
+  primaryAction,
+  bulkActions = [],
+  onSelectionChange,
+  serverSide = false,
+  sorting = [],
+  onSortingChange,
+  pagination,
+  onPaginationChange,
+  searchValue,
+  onSearchChange,
+  columnVisibility,
+  onColumnVisibilityChange,
+  error,
+  onRetry,
 }: DataTableProps<T>) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState(searchValue || "")
+  const [currentPage, setCurrentPage] = useState(pagination?.page || 1)
   const [showFilters, setShowFilters] = useState(false)
-  const itemsPerPage = 10
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<Record<string, boolean>>(
+    columnVisibility || columns.reduce((acc, col) => ({ ...acc, [col.key]: true }), {}),
+  )
+
+  // Internal selection state
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [isAllSelected, setIsAllSelected] = useState(false)
+
+  const itemsPerPage = pagination?.pageSize || 10
+
+  // Use external column visibility if provided, otherwise use internal
+  const visibilityState = columnVisibility || internalColumnVisibility
+  const setVisibilityState = onColumnVisibilityChange || setInternalColumnVisibility
+
+  // Visible columns based on visibility state
+  const visibleColumns = columns.filter((col) => visibilityState[col.key] !== false)
+
+  // Reset selection when data changes
+  useEffect(() => {
+    setSelectedItems([])
+    setIsAllSelected(false)
+  }, [data])
+
+  // Sync search query with external search value
+  useEffect(() => {
+    if (searchValue !== undefined) {
+      setSearchQuery(searchValue)
+    }
+  }, [searchValue])
+
+  // Sync current page with external pagination
+  useEffect(() => {
+    if (pagination?.page !== undefined) {
+      setCurrentPage(pagination.page)
+    }
+  }, [pagination?.page])
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selectedObjects = data.filter((item) => selectedItems.includes(item.id))
+      onSelectionChange(selectedItems, selectedObjects)
+    }
+  }, [selectedItems, data, onSelectionChange])
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
-    setCurrentPage(1)
+    if (serverSide && onSearchChange) {
+      onSearchChange(value)
+    } else {
+      setCurrentPage(1)
+    }
   }
 
   const handleFilterChange = (filterKey: string, value: string) => {
     // Convert "all" back to empty string for the parent component
     const actualValue = value === "all" ? "" : value
     onFilterChange?.(filterKey, actualValue)
-    setCurrentPage(1)
+    if (!serverSide) {
+      setCurrentPage(1)
+    }
+  }
+
+  const handleSortChange = (columnKey: string) => {
+    if (!onSortingChange) return
+
+    const existingSort = sorting.find((s) => s.key === columnKey)
+    let newSorting: DataTableSort[]
+
+    if (!existingSort) {
+      // Add new sort
+      newSorting = [{ key: columnKey, direction: "asc" }]
+    } else if (existingSort.direction === "asc") {
+      // Change to desc
+      newSorting = [{ key: columnKey, direction: "desc" }]
+    } else {
+      // Remove sort
+      newSorting = []
+    }
+
+    onSortingChange(newSorting)
+  }
+
+  const getSortIcon = (columnKey: string) => {
+    const sort = sorting.find((s) => s.key === columnKey)
+    if (!sort) return <ArrowUpDown className="h-4 w-4 opacity-50" />
+    if (sort.direction === "asc") return <ArrowUp className="h-4 w-4" />
+    return <ArrowDown className="h-4 w-4" />
   }
 
   const handleRowClick = (item: T) => {
@@ -93,69 +263,102 @@ export function DataTable<T extends { id: string }>({
   }
 
   const handleSelectionChange = (itemId: string, checked: boolean) => {
-    if (!onSelectionChange) return
-
     let newSelection: string[]
     if (checked) {
       newSelection = [...selectedItems, itemId]
     } else {
       newSelection = selectedItems.filter((id) => id !== itemId)
     }
-    onSelectionChange(newSelection)
+    setSelectedItems(newSelection)
+    setIsAllSelected(newSelection.length === filteredData.length && filteredData.length > 0)
   }
 
   const handleSelectAll = (checked: boolean) => {
-    if (onSelectAll) {
-      onSelectAll(checked)
+    if (checked) {
+      const allIds = filteredData.map((item) => item.id)
+      setSelectedItems(allIds)
+      setIsAllSelected(true)
+    } else {
+      setSelectedItems([])
+      setIsAllSelected(false)
     }
   }
 
-  // Filter and search data
-  const filteredData = data.filter((item) => {
-    // Apply search filter
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase()
-      const itemString = JSON.stringify(item).toLowerCase()
-      if (!itemString.includes(searchLower)) {
-        return false
-      }
-    }
+  const handleClearSelection = () => {
+    setSelectedItems([])
+    setIsAllSelected(false)
+  }
 
-    // Apply other filters
-    for (const filter of filters) {
-      if (filter.value && filter.value !== "all") {
-        const itemValue = (item as any)[filter.key]
-        if (filter.type === "select") {
-          if (itemValue !== filter.value) {
-            return false
-          }
-        } else if (filter.type === "text") {
-          if (!itemValue?.toString().toLowerCase().includes(filter.value.toLowerCase())) {
-            return false
-          }
-        } else if (filter.type === "number") {
-          const numValue = Number(itemValue)
-          const filterNum = Number(filter.value)
-          if (isNaN(numValue) || numValue < filterNum) {
-            return false
-          }
-        } else if (filter.type === "date") {
-          const itemDate = new Date(itemValue).toDateString()
-          const filterDate = new Date(filter.value).toDateString()
-          if (itemDate !== filterDate) {
+  const handleViewChange = (view: DataTableView) => {
+    onViewChange?.(view)
+    // Clear selection when view changes
+    setSelectedItems([])
+    setIsAllSelected(false)
+  }
+
+  const handleColumnVisibilityChange = (columnKey: string, visible: boolean) => {
+    const newVisibility = { ...visibilityState, [columnKey]: visible }
+    setVisibilityState(newVisibility)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (serverSide && onPaginationChange && pagination) {
+      onPaginationChange({ ...pagination, page: newPage })
+    } else {
+      setCurrentPage(newPage)
+    }
+  }
+
+  // Filter and search data (only if not server-side)
+  const filteredData = serverSide
+    ? data
+    : data.filter((item) => {
+        // Apply search filter
+        if (searchQuery) {
+          const searchLower = searchQuery.toLowerCase()
+          const itemString = JSON.stringify(item).toLowerCase()
+          if (!itemString.includes(searchLower)) {
             return false
           }
         }
-      }
-    }
 
-    return true
-  })
+        // Apply other filters
+        for (const filter of filters) {
+          if (filter.value && filter.value !== "all") {
+            const itemValue = (item as any)[filter.key]
+            if (filter.type === "select") {
+              if (itemValue !== filter.value) {
+                return false
+              }
+            } else if (filter.type === "text") {
+              if (!itemValue?.toString().toLowerCase().includes(filter.value.toLowerCase())) {
+                return false
+              }
+            } else if (filter.type === "number") {
+              const numValue = Number(itemValue)
+              const filterNum = Number(filter.value)
+              if (isNaN(numValue) || numValue < filterNum) {
+                return false
+              }
+            } else if (filter.type === "date") {
+              const itemDate = new Date(itemValue).toDateString()
+              const filterDate = new Date(filter.value).toDateString()
+              if (itemDate !== filterDate) {
+                return false
+              }
+            }
+          }
+        }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage)
+        return true
+      })
+
+  // Pagination (only if not server-side)
+  const totalPages = serverSide
+    ? Math.ceil((pagination?.total || 0) / itemsPerPage)
+    : Math.ceil(filteredData.length / itemsPerPage)
+  const startIndex = serverSide ? 0 : (currentPage - 1) * itemsPerPage
+  const paginatedData = serverSide ? filteredData : filteredData.slice(startIndex, startIndex + itemsPerPage)
 
   const renderFilterInput = (filter: DataTableFilter) => {
     if (filter.type === "select") {
@@ -187,9 +390,34 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center py-12">
+          <div className="text-destructive mb-2">Error loading data</div>
+          <div className="text-sm text-muted-foreground mb-4">{error}</div>
+          {onRetry && (
+            <Button onClick={onRetry} variant="outline">
+              Try Again
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
+        {/* Header skeleton */}
+        {(title || primaryAction) && (
+          <div className="flex items-center justify-between pb-4">
+            <Skeleton className="h-10 w-48" />
+            {primaryAction && <Skeleton className="h-10 w-32" />}
+          </div>
+        )}
+
         {/* Filters skeleton */}
         {filters.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -239,6 +467,136 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4">
+      {/* Header with View Selector */}
+      {(title || primaryAction) && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
+          <div className="flex items-center gap-2">
+            {title && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-3xl font-bold text-foreground p-0 h-auto hover:bg-transparent"
+                  >
+                    <span>{currentView ? currentView.name : title}</span>
+                    <ChevronDown className="ml-2 h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Select View</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {views.map((view) => (
+                    <DropdownMenuItem
+                      key={view.id}
+                      onClick={() => handleViewChange(view)}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{view.name}</span>
+                      {currentView?.id === view.id && <Check className="h-4 w-4" />}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onCreateView} className="text-primary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create New View
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* Header Actions */}
+          <div className="flex items-center gap-2">
+            {/* Secondary Actions */}
+            {onSaveView && (
+              <Button
+                variant="outline"
+                onClick={onSaveView}
+                disabled={loading}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <Bookmark className="h-4 w-4" />
+                <span className="hidden sm:inline">Save View</span>
+              </Button>
+            )}
+            
+
+            {/* Primary Action */}
+            {primaryAction && (
+              <Button
+                variant={primaryAction.variant || "default"}
+                onClick={primaryAction.onClick}
+                className="flex items-center space-x-2"
+                disabled={loading}
+              >
+                {primaryAction.icon && <primaryAction.icon className="h-4 w-4" />}
+                <span>{primaryAction.text}</span>
+              </Button>
+            )}
+            {onExport && (
+              <Button
+                variant="outline"
+                onClick={onExport}
+                disabled={loading}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
+            {onShare && (
+              <Button
+                variant="outline"
+                onClick={onShare}
+                disabled={loading}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            )}
+            {onViewsClick && (
+              <Button
+                variant="outline"
+                onClick={onViewsClick}
+                disabled={loading}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Actions Bar */}
+      {selectable && selectedItems.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-border">
+          <span className="text-sm text-foreground">{selectedItems.length} item(s) selected</span>
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleClearSelection}
+              className="border-border text-foreground hover:bg-accent bg-transparent"
+            >
+              Clear
+            </Button>
+            {bulkActions.map((action, index) => (
+              <Button
+                key={index}
+                size="sm"
+                variant={action.variant || "outline"}
+                onClick={() => action.onClick(selectedItems)}
+                disabled={loading}
+                className="border-border text-foreground hover:bg-accent bg-transparent flex items-center space-x-1"
+              >
+                {action.icon && <action.icon className="h-4 w-4" />}
+                <span>{action.label}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Mobile Filter Toggle */}
       {filters.length > 0 && (
         <div className="sm:hidden">
@@ -271,71 +629,85 @@ export function DataTable<T extends { id: string }>({
         </div>
       )}
 
-      {/* Actions and Search */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        {/* Left Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {onExport && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExport}
-              className="flex items-center space-x-2 bg-transparent"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
-          )}
-          {onShare && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onShare}
-              className="flex items-center space-x-2 bg-transparent"
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-          )}
-        </div>
-
+      {/* Search and Actions Row */}
+      <div className="flex items-center gap-2">
         {/* Search */}
         {searchable && (
-          <div className="relative flex-1 lg:max-w-md">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-full"
+              disabled={loading}
             />
           </div>
         )}
 
-        {/* Right Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {onViewsClick && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onViewsClick}
-              className="flex items-center space-x-2 bg-transparent"
-            >
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">Views</span>
-            </Button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Filter Button */}
+          {filters.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-1 bg-transparent px-2 sm:px-3"
+                  disabled={loading}
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden lg:inline">Filter</span>
+                  {filters.some((f) => f.value) && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
+                      {filters.filter((f) => f.value).length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-4">
+                  <h4 className="font-medium leading-none">Filters</h4>
+                  {filters.map((filter) => (
+                    <div key={filter.key} className="space-y-2">
+                      <label className="text-sm font-medium">{filter.label}</label>
+                      {renderFilterInput(filter)}
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
-          {onSaveView && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSaveView}
-              className="flex items-center space-x-2 bg-transparent"
-            >
-              <Bookmark className="h-4 w-4" />
-              <span className="hidden sm:inline">Save View</span>
-            </Button>
-          )}
+
+          {/* Column Visibility Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-1 bg-transparent px-2 sm:px-3"
+                disabled={loading}
+              >
+                <Columns className="h-4 w-4" />
+                <span className="hidden lg:inline">Columns</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {columns.map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.key}
+                  className="capitalize"
+                  checked={visibilityState[column.key] !== false}
+                  onCheckedChange={(value) => handleColumnVisibilityChange(column.key, !!value)}
+                >
+                  {column.header}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -350,9 +722,22 @@ export function DataTable<T extends { id: string }>({
                   <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} aria-label="Select all" />
                 </div>
               )}
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <div key={column.key} className={`${column.width || "flex-1 min-w-[150px]"} px-2 flex-shrink-0`}>
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">{column.header}</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">{column.header}</span>
+                    {column.sortable !== false && onSortingChange && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-transparent"
+                        onClick={() => handleSortChange(column.key)}
+                        disabled={loading}
+                      >
+                        {getSortIcon(column.key)}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -382,7 +767,7 @@ export function DataTable<T extends { id: string }>({
                       />
                     </div>
                   )}
-                  {columns.map((column) => (
+                  {visibleColumns.map((column) => (
                     <div key={column.key} className={`${column.width || "flex-1 min-w-[150px]"} px-2 flex-shrink-0`}>
                       {column.render(item)}
                     </div>
@@ -398,15 +783,16 @@ export function DataTable<T extends { id: string }>({
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="text-sm text-muted-foreground text-center sm:text-left">
-            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of{" "}
-            {filteredData.length} results
+            Showing {startIndex + 1} to{" "}
+            {Math.min(startIndex + itemsPerPage, serverSide ? pagination?.total || 0 : filteredData.length)} of{" "}
+            {serverSide ? pagination?.total || 0 : filteredData.length} results
           </div>
           <div className="flex items-center justify-center space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
               className="flex items-center space-x-1"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -420,7 +806,8 @@ export function DataTable<T extends { id: string }>({
                     key={pageNum}
                     variant={currentPage === pageNum ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => handlePageChange(pageNum)}
+                    disabled={loading}
                     className="w-8 h-8 p-0"
                   >
                     {pageNum}
@@ -431,8 +818,8 @@ export function DataTable<T extends { id: string }>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
               className="flex items-center space-x-1"
             >
               <span className="hidden sm:inline">Next</span>
