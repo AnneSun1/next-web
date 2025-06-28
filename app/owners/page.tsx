@@ -8,89 +8,118 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
 import { PageHeader } from "@/components/ui/page-header"
-import { Plus, Eye, Edit, Mail, Phone, Calendar } from "lucide-react"
+import { Plus, Eye, Edit, Mail, Phone, Crown, Building2 } from "lucide-react"
 
-interface User {
+interface Owner {
   id: string
   name: string
   email: string
   phone: string
-  role: "admin" | "manager" | "staff"
+  properties: number
+  totalRevenue: number
+  isPrimary: boolean
   status: "active" | "inactive" | "pending"
   joinDate: string
   lastLogin: string
 }
 
-const mockUsers: User[] = [
+const mockOwners: Owner[] = [
   {
     id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
+    name: "John Smith",
+    email: "john.smith@example.com",
     phone: "+1 (555) 123-4567",
-    role: "admin",
+    properties: 5,
+    totalRevenue: 125000,
+    isPrimary: true,
     status: "active",
-    joinDate: "2023-01-15",
-    lastLogin: "2024-01-20T10:30:00Z",
+    joinDate: "2022-01-15",
+    lastLogin: "2024-01-20",
   },
   {
     id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
+    name: "Sarah Johnson",
+    email: "sarah.johnson@example.com",
     phone: "+1 (555) 234-5678",
-    role: "manager",
+    properties: 3,
+    totalRevenue: 78000,
+    isPrimary: false,
     status: "active",
-    joinDate: "2023-03-22",
-    lastLogin: "2024-01-19T14:15:00Z",
+    joinDate: "2022-08-22",
+    lastLogin: "2024-01-18",
   },
   {
     id: "3",
-    name: "Mike Johnson",
-    email: "mike.johnson@example.com",
+    name: "Michael Brown",
+    email: "michael.brown@example.com",
     phone: "+1 (555) 345-6789",
-    role: "staff",
+    properties: 8,
+    totalRevenue: 210000,
+    isPrimary: true,
+    status: "active",
+    joinDate: "2021-11-10",
+    lastLogin: "2024-01-19",
+  },
+  {
+    id: "4",
+    name: "Emily Davis",
+    email: "emily.davis@example.com",
+    phone: "+1 (555) 456-7890",
+    properties: 2,
+    totalRevenue: 45000,
+    isPrimary: false,
     status: "pending",
-    joinDate: "2024-01-10",
-    lastLogin: "2024-01-18T09:45:00Z",
+    joinDate: "2024-01-01",
+    lastLogin: "2024-01-15",
+  },
+  {
+    id: "5",
+    name: "Robert Wilson",
+    email: "robert.wilson@example.com",
+    phone: "+1 (555) 567-8901",
+    properties: 1,
+    totalRevenue: 15000,
+    isPrimary: false,
+    status: "inactive",
+    joinDate: "2023-05-20",
+    lastLogin: "2023-12-01",
   },
 ]
 
-export default function UsersPage() {
+export default function OwnersPage() {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  const [users] = useState<User[]>(mockUsers)
+  const [owners] = useState<Owner[]>(mockOwners)
   const [loading] = useState(false)
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([])
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [filters, setFilters] = useState<Record<string, string>>({
-    role: "",
     status: "",
+    properties: "",
     joinDate: "",
   })
 
   useEffect(() => {
-    dispatch(setActiveTab("users"))
+    dispatch(setActiveTab("owners"))
   }, [dispatch])
-
-  const getRoleBadge = (role: string) => {
-    const roleConfig: Record<string, { color: string; text: string }> = {
-      admin: { color: "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30", text: "Admin" },
-      manager: { color: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30", text: "Manager" },
-      staff: { color: "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30", text: "Staff" },
-    }
-
-    const config = roleConfig[role.toLowerCase()] || roleConfig.staff
-    return <Badge className={`${config.color} border`}>{config.text}</Badge>
-  }
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; text: string }> = {
       active: { color: "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30", text: "Active" },
-      inactive: { color: "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30", text: "Inactive" },
       pending: { color: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30", text: "Pending" },
+      inactive: { color: "bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30", text: "Inactive" },
     }
 
     const config = statusConfig[status.toLowerCase()] || statusConfig.pending
     return <Badge className={`${config.color} border`}>{config.text}</Badge>
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+    }).format(amount)
   }
 
   const formatDate = (dateString: string) => {
@@ -101,29 +130,24 @@ export default function UsersPage() {
     })
   }
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }
-
-  const handleRowClick = (user: User) => {
-    router.push(`/users/${user.id}`)
+  const handleRowClick = (owner: Owner) => {
+    router.push(`/owners/${owner.id}`)
   }
 
   const handleFilterChange = (filterKey: string, value: string) => {
     setFilters((prev) => ({ ...prev, [filterKey]: value }))
   }
 
+  const handleAddOwner = () => {
+    console.log("Add new owner...")
+  }
+
   const handleExport = () => {
-    console.log("Exporting users data...")
+    console.log("Exporting owners data...")
   }
 
   const handleShare = () => {
-    console.log("Sharing users data...")
+    console.log("Sharing owners data...")
   }
 
   const handleViewsClick = () => {
@@ -136,26 +160,22 @@ export default function UsersPage() {
 
   const tableFilters: DataTableFilter[] = [
     {
-      key: "role",
-      label: "Role",
-      type: "select",
-      value: filters.role,
-      options: [
-        { value: "admin", label: "Admin" },
-        { value: "manager", label: "Manager" },
-        { value: "staff", label: "Staff" },
-      ],
-    },
-    {
       key: "status",
       label: "Status",
       type: "select",
       value: filters.status,
       options: [
         { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
         { value: "pending", label: "Pending" },
+        { value: "inactive", label: "Inactive" },
       ],
+    },
+    {
+      key: "properties",
+      label: "Min Properties",
+      type: "number",
+      value: filters.properties,
+      placeholder: "Minimum properties",
     },
     {
       key: "joinDate",
@@ -166,63 +186,79 @@ export default function UsersPage() {
     },
   ]
 
-  const columns: DataTableColumn<User>[] = [
+  const columns: DataTableColumn<Owner>[] = [
     {
-      key: "user",
-      header: "User",
+      key: "owner",
+      header: "Owner",
       width: "w-64",
-      render: (user) => (
-        <div className="space-y-1">
-          <div className="font-medium text-foreground">{user.name}</div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Mail className="h-3 w-3" />
-            <span>{user.email}</span>
+      render: (owner) => (
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            {owner.isPrimary && <Crown className="absolute -top-1 -right-1 h-4 w-4 text-yellow-500 fill-current" />}
           </div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Phone className="h-3 w-3" />
-            <span>{user.phone}</span>
+          <div className="space-y-1">
+            <div className="font-medium text-foreground">{owner.name}</div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Mail className="h-3 w-3" />
+              <span>{owner.email}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Phone className="h-3 w-3" />
+              <span>{owner.phone}</span>
+            </div>
           </div>
         </div>
       ),
     },
     {
-      key: "role",
-      header: "Role",
+      key: "properties",
+      header: "Properties",
       width: "w-32",
-      render: (user) => getRoleBadge(user.role),
+      render: (owner) => (
+        <div className="text-center">
+          <div className="text-lg font-semibold text-foreground">{owner.properties}</div>
+          <div className="text-xs text-muted-foreground">properties</div>
+        </div>
+      ),
+    },
+    {
+      key: "revenue",
+      header: "Total Revenue",
+      width: "w-40",
+      render: (owner) => <div className="font-medium text-foreground">{formatCurrency(owner.totalRevenue)}</div>,
+    },
+    {
+      key: "dates",
+      header: "Dates",
+      width: "w-40",
+      render: (owner) => (
+        <div className="space-y-1">
+          <div className="text-sm text-foreground">Joined: {formatDate(owner.joinDate)}</div>
+          <div className="text-xs text-muted-foreground">Last login: {formatDate(owner.lastLogin)}</div>
+        </div>
+      ),
     },
     {
       key: "status",
       header: "Status",
       width: "w-32",
-      render: (user) => getStatusBadge(user.status),
-    },
-    {
-      key: "dates",
-      header: "Dates",
-      width: "w-48",
-      render: (user) => (
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2 text-sm text-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>Joined: {formatDate(user.joinDate)}</span>
-          </div>
-          <div className="text-xs text-muted-foreground">Last login: {formatDateTime(user.lastLogin)}</div>
-        </div>
-      ),
+      render: (owner) => getStatusBadge(owner.status),
     },
     {
       key: "actions",
       header: "Actions",
       width: "w-24",
-      render: (user) => (
+      render: (owner) => (
         <div className="flex items-center space-x-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              console.log("View user:", user.id)
+              console.log("View owner:", owner.id)
             }}
             className="h-8 w-8 p-0 hover:bg-accent"
           >
@@ -233,7 +269,7 @@ export default function UsersPage() {
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              console.log("Edit user:", user.id)
+              console.log("Edit owner:", owner.id)
             }}
             className="h-8 w-8 p-0 hover:bg-accent"
           >
@@ -245,16 +281,16 @@ export default function UsersPage() {
   ]
 
   const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedUsers(selectedIds)
-    setIsAllSelected(selectedIds.length === users.length && users.length > 0)
+    setSelectedOwners(selectedIds)
+    setIsAllSelected(selectedIds.length === owners.length && owners.length > 0)
   }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedUsers(users.map((user) => user.id))
+      setSelectedOwners(owners.map((owner) => owner.id))
       setIsAllSelected(true)
     } else {
-      setSelectedUsers([])
+      setSelectedOwners([])
       setIsAllSelected(false)
     }
   }
@@ -262,21 +298,21 @@ export default function UsersPage() {
   return (
     <div className="p-8 bg-background min-h-screen">
       <PageHeader
-        title="Users"
-        description="Manage team members and user accounts"
-        buttonText="Add User"
+        title="Owners"
+        description="Manage property owners and partnerships"
+        buttonText="Add Owner"
         buttonIcon={Plus}
-        onButtonClick={() => console.log("Add user clicked")}
+        onButtonClick={handleAddOwner}
       />
 
-      {selectedUsers.length > 0 && (
+      {selectedOwners.length > 0 && (
         <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
-          <span className="text-sm text-foreground">{selectedUsers.length} user(s) selected</span>
+          <span className="text-sm text-foreground">{selectedOwners.length} owner(s) selected</span>
           <div className="flex items-center space-x-2">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setSelectedUsers([])}
+              onClick={() => setSelectedOwners([])}
               className="border-border text-foreground hover:bg-accent bg-transparent"
             >
               Clear
@@ -286,33 +322,33 @@ export default function UsersPage() {
               variant="outline"
               className="border-border text-foreground hover:bg-accent bg-transparent"
             >
-              Update Role
+              Update Status
             </Button>
             <Button
               size="sm"
               variant="outline"
               className="border-border text-foreground hover:bg-accent bg-transparent"
             >
-              Export
+              Send Message
             </Button>
           </div>
         </div>
       )}
 
       <DataTable
-        data={users}
+        data={owners}
         columns={columns}
         loading={loading}
         searchable
-        searchPlaceholder="Search users..."
+        searchPlaceholder="Search owners..."
         selectable
-        selectedItems={selectedUsers}
+        selectedItems={selectedOwners}
         onSelectionChange={handleSelectionChange}
         onSelectAll={handleSelectAll}
         isAllSelected={isAllSelected}
         onRowClick={handleRowClick}
-        emptyMessage="No users found"
-        emptyDescription="Add your first team member to get started"
+        emptyMessage="No owners found"
+        emptyDescription="Property owners will appear here once added"
         filters={tableFilters}
         onFilterChange={handleFilterChange}
         onExport={handleExport}

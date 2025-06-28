@@ -2,15 +2,15 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 
 interface NavigationState {
   activeTab: string
-  sidebarOpen: boolean
+  isCollapsed: boolean
 }
 
 const initialState: NavigationState = {
   activeTab: "dashboard",
-  sidebarOpen: true,
+  isCollapsed: false,
 }
 
-const navigationSlice = createSlice({
+export const navigationSlice = createSlice({
   name: "navigation",
   initialState,
   reducers: {
@@ -18,13 +18,13 @@ const navigationSlice = createSlice({
       state.activeTab = action.payload
     },
     toggleSidebar: (state) => {
-      state.sidebarOpen = !state.sidebarOpen
+      state.isCollapsed = !state.isCollapsed
     },
-    setSidebarOpen: (state, action: PayloadAction<boolean>) => {
-      state.sidebarOpen = action.payload
+    setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.isCollapsed = action.payload
     },
   },
 })
 
-export const { setActiveTab, toggleSidebar, setSidebarOpen } = navigationSlice.actions
+export const { setActiveTab, toggleSidebar, setSidebarCollapsed } = navigationSlice.actions
 export default navigationSlice.reducer

@@ -1,122 +1,173 @@
 "use client"
 
-import { useEffect } from "react"
-import { useAppDispatch } from "@/lib/hooks"
-import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StatsCard, StatsGrid } from "@/components/ui/stats-card"
-import { BarChart3, Users, Building2, Calendar } from "lucide-react"
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { StatsCard } from "@/components/ui/stats-card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { CalendarDays, Users, Home, DollarSign, CheckCircle, AlertCircle } from "lucide-react"
 
 export default function DashboardPage() {
-  const dispatch = useAppDispatch()
-  useKeyboardShortcuts()
+  const stats = [
+    {
+      title: "Total Revenue",
+      value: "$45,231.89",
+      change: "+20.1% from last month",
+      icon: DollarSign,
+      trend: "up" as const,
+    },
+    {
+      title: "Active Reservations",
+      value: "23",
+      change: "+180.1% from last month",
+      icon: CalendarDays,
+      trend: "up" as const,
+    },
+    {
+      title: "Properties",
+      value: "12",
+      change: "+19% from last month",
+      icon: Home,
+      trend: "up" as const,
+    },
+    {
+      title: "Guests",
+      value: "573",
+      change: "+201 since last hour",
+      icon: Users,
+      trend: "up" as const,
+    },
+  ]
 
-  useEffect(() => {
-    dispatch(setActiveTab("dashboard"))
-  }, [dispatch])
+  const recentReservations = [
+    {
+      id: "RES-001",
+      guest: "John Doe",
+      property: "Sunset Villa",
+      checkIn: "2024-01-15",
+      checkOut: "2024-01-20",
+      status: "confirmed",
+      amount: "$1,250",
+    },
+    {
+      id: "RES-002",
+      guest: "Jane Smith",
+      property: "Ocean View Condo",
+      checkIn: "2024-01-18",
+      checkOut: "2024-01-25",
+      status: "pending",
+      amount: "$2,100",
+    },
+    {
+      id: "RES-003",
+      guest: "Mike Johnson",
+      property: "Mountain Cabin",
+      checkIn: "2024-01-22",
+      checkOut: "2024-01-28",
+      status: "confirmed",
+      amount: "$980",
+    },
+  ]
+
+  const upcomingTasks = [
+    {
+      id: 1,
+      title: "Property inspection - Sunset Villa",
+      dueDate: "Today, 2:00 PM",
+      priority: "high",
+      type: "maintenance",
+    },
+    {
+      id: 2,
+      title: "Guest check-in - Ocean View Condo",
+      dueDate: "Tomorrow, 3:00 PM",
+      priority: "medium",
+      type: "guest",
+    },
+    {
+      id: 3,
+      title: "Cleaning - Mountain Cabin",
+      dueDate: "Jan 20, 10:00 AM",
+      priority: "low",
+      type: "cleaning",
+    },
+  ]
 
   return (
-    <div className="p-8 bg-background min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your properties.</p>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <Button>Download Report</Button>
+        </div>
       </div>
 
-      <StatsGrid className="mb-8">
-        <StatsCard
-          title="Total Properties"
-          value="24"
-          description="Active listings"
-          icon={Building2}
-          color="text-blue-500"
-        />
-        <StatsCard
-          title="Active Reservations"
-          value="18"
-          description="Current bookings"
-          icon={Calendar}
-          color="text-green-500"
-          trend={{ value: "+12%", isPositive: true }}
-        />
-        <StatsCard
-          title="Total Users"
-          value="156"
-          description="Registered guests"
-          icon={Users}
-          color="text-purple-500"
-        />
-        <StatsCard
-          title="Revenue"
-          value="$12,450"
-          description="This month"
-          icon={BarChart3}
-          color="text-yellow-500"
-          trend={{ value: "+8.2%", isPositive: true }}
-        />
-      </StatsGrid>
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <StatsCard key={index} {...stat} />
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Recent Reservations */}
+        <Card className="col-span-4">
           <CardHeader>
-            <CardTitle className="text-foreground">Recent Activity</CardTitle>
-            <CardDescription className="text-muted-foreground">Latest updates from your properties</CardDescription>
+            <CardTitle>Recent Reservations</CardTitle>
+            <CardDescription>You have {recentReservations.length} reservations this week.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">New reservation for Ocean View Villa</p>
-                  <p className="text-xs text-muted-foreground">2 hours ago</p>
+            <div className="space-y-8">
+              {recentReservations.map((reservation) => (
+                <div key={reservation.id} className="flex items-center">
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">{reservation.guest}</p>
+                    <p className="text-sm text-muted-foreground">{reservation.property}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {reservation.checkIn} - {reservation.checkOut}
+                    </p>
+                  </div>
+                  <div className="ml-auto font-medium flex items-center gap-2">
+                    <Badge variant={reservation.status === "confirmed" ? "default" : "secondary"}>
+                      {reservation.status}
+                    </Badge>
+                    {reservation.amount}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">Property maintenance completed</p>
-                  <p className="text-xs text-muted-foreground">4 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">New user registration</p>
-                  <p className="text-xs text-muted-foreground">6 hours ago</p>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        {/* Upcoming Tasks */}
+        <Card className="col-span-3">
           <CardHeader>
-            <CardTitle className="text-foreground">Upcoming Tasks</CardTitle>
-            <CardDescription className="text-muted-foreground">Tasks that need your attention</CardDescription>
+            <CardTitle>Upcoming Tasks</CardTitle>
+            <CardDescription>You have {upcomingTasks.length} tasks pending.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">Property inspection due</p>
-                  <p className="text-xs text-muted-foreground">Tomorrow</p>
+            <div className="space-y-8">
+              {upcomingTasks.map((task) => (
+                <div key={task.id} className="flex items-center">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                    {task.type === "maintenance" && <AlertCircle className="h-4 w-4" />}
+                    {task.type === "guest" && <Users className="h-4 w-4" />}
+                    {task.type === "cleaning" && <CheckCircle className="h-4 w-4" />}
+                  </div>
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">{task.title}</p>
+                    <p className="text-sm text-muted-foreground">{task.dueDate}</p>
+                  </div>
+                  <div className="ml-auto">
+                    <Badge
+                      variant={
+                        task.priority === "high" ? "destructive" : task.priority === "medium" ? "default" : "secondary"
+                      }
+                    >
+                      {task.priority}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">Guest check-in preparation</p>
-                  <p className="text-xs text-muted-foreground">In 2 days</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">Monthly report generation</p>
-                  <p className="text-xs text-muted-foreground">Next week</p>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

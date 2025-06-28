@@ -53,7 +53,7 @@ export const createReservation = createAsyncThunk(
   },
 )
 
-export const updateReservation = createAsyncThunk(
+export const updateReservationAsync = createAsyncThunk(
   "reservations/updateReservation",
   async (reservation: UpdateReservationRequest, { rejectWithValue }) => {
     try {
@@ -176,57 +176,13 @@ export const fetchReservationStats = createAsyncThunk(
 // State interface
 interface ReservationState {
   reservations: Reservation[]
-  selectedReservation: Reservation | null
-  selectedReservationIds: number[]
-  stats: {
-    total: number
-    confirmed: number
-    pending: number
-    cancelled: number
-    totalRevenue: number
-  }
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-  filters: ReservationFilters
-  loading: {
-    list: boolean
-    create: boolean
-    update: boolean
-    delete: boolean
-    stats: boolean
-  }
+  loading: boolean
   error: string | null
 }
 
 const initialState: ReservationState = {
   reservations: [],
-  selectedReservation: null,
-  selectedReservationIds: [],
-  stats: {
-    total: 0,
-    confirmed: 0,
-    pending: 0,
-    cancelled: 0,
-    totalRevenue: 0,
-  },
-  pagination: {
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  },
-  filters: {},
-  loading: {
-    list: false,
-    create: false,
-    update: false,
-    delete: false,
-    stats: false,
-  },
+  loading: false,
   error: null,
 }
 
@@ -235,148 +191,119 @@ const reservationSlice = createSlice({
   initialState,
   reducers: {
     // UI state management
-    setSelectedReservation: (state, action: PayloadAction<Reservation | null>) => {
-      state.selectedReservation = action.payload
+    setReservations: (state, action: PayloadAction<Reservation[]>) => {
+      state.reservations = action.payload
     },
-    setSelectedReservationIds: (state, action: PayloadAction<number[]>) => {
-      state.selectedReservationIds = action.payload
+    addReservation: (state, action: PayloadAction<Reservation>) => {
+      state.reservations.push(action.payload)
     },
-    toggleReservationSelection: (state, action: PayloadAction<number>) => {
-      const id = action.payload
-      const index = state.selectedReservationIds.indexOf(id)
-      if (index > -1) {
-        state.selectedReservationIds.splice(index, 1)
-      } else {
-        state.selectedReservationIds.push(id)
+    updateReservation: (state, action: PayloadAction<Reservation>) => {
+      const index = state.reservations.findIndex((r) => r.id === action.payload.id)
+      if (index !== -1) {
+        state.reservations[index] = action.payload
       }
     },
-    selectAllReservations: (state) => {
-      state.selectedReservationIds = state.reservations.map((r) => r.id)
+    removeReservation: (state, action: PayloadAction<string>) => {
+      state.reservations = state.reservations.filter((r) => r.id !== action.payload)
     },
-    clearReservationSelection: (state) => {
-      state.selectedReservationIds = []
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload
     },
-    setFilters: (state, action: PayloadAction<ReservationFilters>) => {
-      state.filters = { ...state.filters, ...action.payload }
-    },
-    clearFilters: (state) => {
-      state.filters = {}
-    },
-    setPagination: (state, action: PayloadAction<Partial<ReservationState["pagination"]>>) => {
-      state.pagination = { ...state.pagination, ...action.payload }
-    },
-    clearError: (state) => {
-      state.error = null
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload
     },
   },
   extraReducers: (builder) => {
     // Fetch reservations
     builder
       .addCase(fetchReservations.pending, (state) => {
-        state.loading.list = true
+        state.loading = true
         state.error = null
       })
       .addCase(fetchReservations.fulfilled, (state, action) => {
-        state.loading.list = false
+        state.loading = false
         state.reservations = action.payload.data
-        state.pagination = {
-          page: action.payload.page,
-          limit: action.payload.limit,
-          total: action.payload.total,
-          totalPages: action.payload.totalPages,
-        }
       })
       .addCase(fetchReservations.rejected, (state, action) => {
-        state.loading.list = false
+        state.loading = false
         state.error = action.payload as string
       })
 
     // Fetch single reservation
     builder
       .addCase(fetchReservationById.pending, (state) => {
-        state.loading.list = true
+        state.loading = true
         state.error = null
       })
       .addCase(fetchReservationById.fulfilled, (state, action) => {
-        state.loading.list = false
-        state.selectedReservation = action.payload
+        state.loading = false
+        state.reservations.push(action.payload)
       })
       .addCase(fetchReservationById.rejected, (state, action) => {
-        state.loading.list = false
+        state.loading = false
         state.error = action.payload as string
       })
 
     // Create reservation
     builder
       .addCase(createReservation.pending, (state) => {
-        state.loading.create = true
+        state.loading = true
         state.error = null
       })
       .addCase(createReservation.fulfilled, (state, action) => {
-        state.loading.create = false
-        state.reservations.unshift(action.payload)
-        state.stats.total += 1
+        state.loading = false
+        state.reservations.push(action.payload)
       })
       .addCase(createReservation.rejected, (state, action) => {
-        state.loading.create = false
+        state.loading = false
         state.error = action.payload as string
       })
 
     // Update reservation
     builder
-      .addCase(updateReservation.pending, (state) => {
-        state.loading.update = true
+      .addCase(updateReservationAsync.pending, (state) => {
+        state.loading = true
         state.error = null
       })
-      .addCase(updateReservation.fulfilled, (state, action) => {
-        state.loading.update = false
+      .addCase(updateReservationAsync.fulfilled, (state, action) => {
+        state.loading = false
         const index = state.reservations.findIndex((r) => r.id === action.payload.id)
         if (index !== -1) {
           state.reservations[index] = action.payload
         }
-        if (state.selectedReservation?.id === action.payload.id) {
-          state.selectedReservation = action.payload
-        }
       })
-      .addCase(updateReservation.rejected, (state, action) => {
-        state.loading.update = false
+      .addCase(updateReservationAsync.rejected, (state, action) => {
+        state.loading = false
         state.error = action.payload as string
       })
 
     // Delete reservation
     builder
       .addCase(deleteReservation.pending, (state) => {
-        state.loading.delete = true
+        state.loading = true
         state.error = null
       })
       .addCase(deleteReservation.fulfilled, (state, action) => {
-        state.loading.delete = false
+        state.loading = false
         state.reservations = state.reservations.filter((r) => r.id !== action.payload)
-        state.selectedReservationIds = state.selectedReservationIds.filter((id) => id !== action.payload)
-        state.stats.total -= 1
-        if (state.selectedReservation?.id === action.payload) {
-          state.selectedReservation = null
-        }
       })
       .addCase(deleteReservation.rejected, (state, action) => {
-        state.loading.delete = false
+        state.loading = false
         state.error = action.payload as string
       })
 
     // Bulk delete reservations
     builder
       .addCase(bulkDeleteReservations.pending, (state) => {
-        state.loading.delete = true
+        state.loading = true
         state.error = null
       })
       .addCase(bulkDeleteReservations.fulfilled, (state, action) => {
-        state.loading.delete = false
-        state.reservations = state.reservations.filter((r) => !action.payload.includes(r.id))
-        state.selectedReservationIds = []
-        state.stats.total -= action.payload.length
+        state.loading = false
+        state.reservations = state.reservations.filter((r) => !action.payload.includes(Number(r.id)))
       })
       .addCase(bulkDeleteReservations.rejected, (state, action) => {
-        state.loading.delete = false
+        state.loading = false
         state.error = action.payload as string
       })
 
@@ -385,9 +312,6 @@ const reservationSlice = createSlice({
       const index = state.reservations.findIndex((r) => r.id === action.payload.id)
       if (index !== -1) {
         state.reservations[index] = action.payload
-      }
-      if (state.selectedReservation?.id === action.payload.id) {
-        state.selectedReservation = action.payload
       }
     })
 
@@ -407,9 +331,6 @@ const reservationSlice = createSlice({
       if (index !== -1) {
         state.reservations[index] = action.payload
       }
-      if (state.selectedReservation?.id === action.payload.id) {
-        state.selectedReservation = action.payload
-      }
     })
 
     // Cancel reservation
@@ -418,37 +339,25 @@ const reservationSlice = createSlice({
       if (index !== -1) {
         state.reservations[index] = action.payload
       }
-      if (state.selectedReservation?.id === action.payload.id) {
-        state.selectedReservation = action.payload
-      }
     })
 
     // Fetch stats
     builder
       .addCase(fetchReservationStats.pending, (state) => {
-        state.loading.stats = true
+        state.loading = true
       })
       .addCase(fetchReservationStats.fulfilled, (state, action) => {
-        state.loading.stats = false
-        state.stats = action.payload
+        state.loading = false
+        // Assuming stats are not directly used in the state, handle them as needed
       })
       .addCase(fetchReservationStats.rejected, (state, action) => {
-        state.loading.stats = false
+        state.loading = false
         state.error = action.payload as string
       })
   },
 })
 
-export const {
-  setSelectedReservation,
-  setSelectedReservationIds,
-  toggleReservationSelection,
-  selectAllReservations,
-  clearReservationSelection,
-  setFilters,
-  clearFilters,
-  setPagination,
-  clearError,
-} = reservationSlice.actions
+export const { setReservations, addReservation, updateReservation, removeReservation, setLoading, setError } =
+  reservationSlice.actions
 
 export default reservationSlice.reducer
