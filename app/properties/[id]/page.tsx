@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MasonryGallery } from "@/components/masonry-gallery"
 import { PropertyCalendar } from "@/components/property-calendar"
 import { mockListings } from "@/constants/listingData"
 import {
@@ -34,6 +33,11 @@ import {
   Camera,
   Building,
   FileText,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Trash2,
+  Upload,
 } from "lucide-react"
 
 export default function PropertyDetailPage() {
@@ -44,6 +48,7 @@ export default function PropertyDetailPage() {
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [formData, setFormData] = useState<any>({})
   const [activeTab, setActiveTab] = useState("listing-info")
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   const listing = mockListings.find((l) => l.id === propertyId)
 
@@ -103,6 +108,18 @@ export default function PropertyDetailPage() {
       default:
         return null
     }
+  }
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % listing.images.length)
+  }
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + listing.images.length) % listing.images.length)
+  }
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index)
   }
 
   return (
@@ -1085,11 +1102,88 @@ export default function PropertyDetailPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">Property Photos</h3>
                 <Button className="flex items-center space-x-2">
-                  <Camera className="h-4 w-4" />
+                  <Upload className="h-4 w-4" />
                   <span>Upload Photos</span>
                 </Button>
               </div>
-              <MasonryGallery images={listing.images} title={listing.title} />
+
+              {/* Main Gallery */}
+              <div className="space-y-4">
+                {/* Main Image Display */}
+                <div className="relative aspect-[16/9] bg-muted rounded-lg overflow-hidden">
+                  <img
+                    src={listing.images[currentImageIndex] || "/placeholder.svg?height=600&width=800"}
+                    alt={`${listing.title} - Photo ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Navigation Arrows */}
+                  {listing.images.length > 1 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                        onClick={prevImage}
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                        onClick={nextImage}
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Image Counter */}
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                    {currentImageIndex + 1} / {listing.images.length}
+                  </div>
+                </div>
+
+                {/* Thumbnail Grid */}
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                  {listing.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToImage(index)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                        index === currentImageIndex
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-transparent hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <img
+                        src={image || "/placeholder.svg?height=100&width=100"}
+                        alt={`${listing.title} - Thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Photo Management */}
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download All
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Camera className="h-4 w-4 mr-2" />
+                      Set as Cover
+                    </Button>
+                  </div>
+                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Photo
+                  </Button>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
