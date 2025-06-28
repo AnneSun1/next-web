@@ -29,22 +29,22 @@ export default function RootLayout({
           <ReduxProvider>
             <SidebarProvider defaultOpen={true}>
               <div className="flex min-h-screen w-full">
-  {/* Sidebar (left) */}
-  <AppSidebar />
+                {/* Sidebar (left) */}
+                <AppSidebar />
 
-  {/* Main content container (right) */}
-  <div className="flex flex-col flex-1 max-w-full">
-    {/* TopBar - must be inside a non-scrollable parent */}
-    <div className="sticky top-0 z-50 bg-background">
-      <TopBar />
-    </div>
+                {/* Main content container (right) */}
+                <div className="flex flex-col flex-1 max-w-full overflow-x-auto">
+                  {/* TopBar - must be inside a non-scrollable parent */}
+                  <div className="sticky top-0 z-50 bg-background ">
+                    <TopBar />
+                  </div>
 
-    {/* Scrollable main area */}
-    <div className="flex-1 overflow-y-auto overflow-x-auto flex-wrap">
-      <main className="bg-background">{children}</main>
-    </div>
-  </div>
-</div>
+                  {/* Scrollable main area */}
+                  <div className="flex-1 overflow-y-auto flex-wrap">
+                    <main className="bg-background">{children}</main>
+                  </div>
+                </div>
+              </div>
 
               <ToastProvider />
             </SidebarProvider>

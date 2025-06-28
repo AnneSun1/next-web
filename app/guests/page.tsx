@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
 import { PageHeader } from "@/components/ui/page-header"
-import { Download, Eye, Edit, Mail, Phone, MapPin, Star, Plus } from "lucide-react"
+import { Mail, Phone, MapPin, Star, Plus } from "lucide-react"
 
 interface Guest {
   id: string
@@ -201,12 +201,12 @@ export default function GuestsPage() {
         <div className="space-y-1">
           <div className="font-medium text-foreground">{guest.name}</div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Mail className="h-3 w-3" />
-            <span>{guest.email}</span>
+            <Mail className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{guest.email}</span>
           </div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Phone className="h-3 w-3" />
-            <span>{guest.phone}</span>
+            <Phone className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{guest.phone}</span>
           </div>
         </div>
       ),
@@ -214,7 +214,7 @@ export default function GuestsPage() {
     {
       key: "stays",
       header: "Stay History",
-      width: "w-40",
+      width: "w-32",
       render: (guest) => (
         <div className="space-y-1">
           <div className="text-sm text-foreground font-medium">{guest.totalStays} stays</div>
@@ -225,27 +225,27 @@ export default function GuestsPage() {
     {
       key: "spending",
       header: "Total Spent",
-      width: "w-32",
+      width: "w-28",
       render: (guest) => <div className="font-medium text-foreground">{formatCurrency(guest.totalSpent)}</div>,
     },
     {
       key: "favorite",
       header: "Favorite Property",
-      width: "w-48",
+      width: "w-40",
       render: (guest) => (
         <div className="flex items-center space-x-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">{guest.favoriteProperty}</span>
+          <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-foreground truncate">{guest.favoriteProperty}</span>
         </div>
       ),
     },
     {
       key: "rating",
       header: "Rating",
-      width: "w-24",
+      width: "w-20",
       render: (guest) => (
         <div className="flex items-center space-x-1">
-          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+          <Star className="h-4 w-4 text-yellow-500 fill-current flex-shrink-0" />
           <span className="text-foreground">{guest.rating > 0 ? guest.rating.toFixed(1) : "N/A"}</span>
         </div>
       ),
@@ -253,40 +253,9 @@ export default function GuestsPage() {
     {
       key: "status",
       header: "Status",
-      width: "w-32",
+      width: "w-28",
       render: (guest) => getStatusBadge(guest.status),
     },
-    // {
-    //   key: "actions",
-    //   header: "Actions",
-    //   width: "w-24",
-    //   render: (guest) => (
-    //     <div className="flex items-center space-x-1">
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => {
-    //           e.stopPropagation()
-    //           console.log("View guest:", guest.id)
-    //         }}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Eye className="h-4 w-4" />
-    //       </Button>
-    //       <Button
-    //         variant="ghost"
-    //         size="sm"
-    //         onClick={(e) => {
-    //           e.stopPropagation()
-    //           console.log("Edit guest:", guest.id)
-    //         }}
-    //         className="h-8 w-8 p-0 hover:bg-accent"
-    //       >
-    //         <Edit className="h-4 w-4" />
-    //       </Button>
-    //     </div>
-    //   ),
-    // },
   ]
 
   const handleSelectionChange = (selectedIds: string[]) => {
@@ -305,66 +274,68 @@ export default function GuestsPage() {
   }
 
   return (
-    <div className="p-8 bg-background min-h-screen">
-      <PageHeader
-        title="Guests"
-        description="Manage guest profiles and stay history"
-        buttonText="Add Guest"
-        buttonIcon={Plus}
-        onButtonClick={handleAddGuest}
-      />
+    <div className="flex flex-col h-full">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+        <PageHeader
+          title="Guests"
+          description="Manage guest profiles and stay history"
+          buttonText="Add Guest"
+          buttonIcon={Plus}
+          onButtonClick={handleAddGuest}
+        />
 
-      {selectedGuests.length > 0 && (
-        <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
-          <span className="text-sm text-foreground">{selectedGuests.length} guest(s) selected</span>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSelectedGuests([])}
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Update Status
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-border text-foreground hover:bg-accent bg-transparent"
-            >
-              Send Message
-            </Button>
+        {selectedGuests.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-accent/50 rounded-lg border border-border">
+            <span className="text-sm text-foreground">{selectedGuests.length} guest(s) selected</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedGuests([])}
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Update Status
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Send Message
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <DataTable
-        data={guests}
-        columns={columns}
-        loading={loading}
-        searchable
-        searchPlaceholder="Search guests..."
-        selectable
-        selectedItems={selectedGuests}
-        onSelectionChange={handleSelectionChange}
-        onSelectAll={handleSelectAll}
-        isAllSelected={isAllSelected}
-        onRowClick={handleRowClick}
-        emptyMessage="No guests found"
-        emptyDescription="Guests will appear here after their first booking"
-        filters={tableFilters}
-        onFilterChange={handleFilterChange}
-        onExport={handleExport}
-        onShare={handleShare}
-        onViewsClick={handleViewsClick}
-        onSaveView={handleSaveView}
-      />
+        <DataTable
+          data={guests}
+          columns={columns}
+          loading={loading}
+          searchable
+          searchPlaceholder="Search guests..."
+          selectable
+          selectedItems={selectedGuests}
+          onSelectionChange={handleSelectionChange}
+          onSelectAll={handleSelectAll}
+          isAllSelected={isAllSelected}
+          onRowClick={handleRowClick}
+          emptyMessage="No guests found"
+          emptyDescription="Guests will appear here after their first booking"
+          filters={tableFilters}
+          onFilterChange={handleFilterChange}
+          onExport={handleExport}
+          onShare={handleShare}
+          onViewsClick={handleViewsClick}
+          onSaveView={handleSaveView}
+        />
+      </div>
     </div>
   )
 }

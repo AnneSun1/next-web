@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Download, Share2, Eye, Bookmark, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Download, Share2, Eye, Bookmark, ChevronLeft, ChevronRight, Filter } from "lucide-react"
 
 export interface DataTableColumn<T> {
   key: string
@@ -71,6 +71,7 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
   const itemsPerPage = 10
 
   const handleSearchChange = (value: string) => {
@@ -160,7 +161,7 @@ export function DataTable<T extends { id: string }>({
     if (filter.type === "select") {
       return (
         <Select value={filter.value || "all"} onValueChange={(value) => handleFilterChange(filter.key, value)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder={filter.label} />
           </SelectTrigger>
           <SelectContent>
@@ -181,7 +182,7 @@ export function DataTable<T extends { id: string }>({
         placeholder={filter.placeholder || filter.label}
         value={filter.value}
         onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-        className="w-40"
+        className="w-full sm:w-40"
       />
     )
   }
@@ -193,18 +194,18 @@ export function DataTable<T extends { id: string }>({
         {filters.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {filters.map((_, index) => (
-              <Skeleton key={index} className="h-10 w-40" />
+              <Skeleton key={index} className="h-10 w-full sm:w-40" />
             ))}
           </div>
         )}
 
         {/* Actions and search skeleton */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center space-x-2">
             <Skeleton className="h-10 w-20" />
             <Skeleton className="h-10 w-20" />
           </div>
-          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-10 w-full sm:w-64" />
           <div className="flex items-center space-x-2">
             <Skeleton className="h-10 w-20" />
             <Skeleton className="h-10 w-24" />
@@ -238,18 +239,42 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div className="space-y-4">
+      {/* Mobile Filter Toggle */}
+      {filters.length > 0 && (
+        <div className="sm:hidden">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full flex items-center justify-center space-x-2"
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filters</span>
+            {filters.some((f) => f.value) && (
+              <span className="ml-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded-full">
+                {filters.filter((f) => f.value).length}
+              </span>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Filters */}
       {filters.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {filters.map((filter) => (
-            <div key={filter.key}>{renderFilterInput(filter)}</div>
-          ))}
+        <div className={`${showFilters ? "block" : "hidden"} sm:block`}>
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
+            {filters.map((filter) => (
+              <div key={filter.key} className="w-full sm:w-auto">
+                {renderFilterInput(filter)}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Actions and Search */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        {/* Left Actions */}
+        <div className="flex flex-wrap items-center gap-2">
           {onExport && (
             <Button
               variant="outline"
@@ -258,7 +283,7 @@ export function DataTable<T extends { id: string }>({
               className="flex items-center space-x-2 bg-transparent"
             >
               <Download className="h-4 w-4" />
-              <span>Export</span>
+              <span className="hidden sm:inline">Export</span>
             </Button>
           )}
           {onShare && (
@@ -269,13 +294,14 @@ export function DataTable<T extends { id: string }>({
               className="flex items-center space-x-2 bg-transparent"
             >
               <Share2 className="h-4 w-4" />
-              <span>Share</span>
+              <span className="hidden sm:inline">Share</span>
             </Button>
           )}
         </div>
 
+        {/* Search */}
         {searchable && (
-          <div className="relative flex-1 max-w-md mx-4">
+          <div className="relative flex-1 lg:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -286,7 +312,8 @@ export function DataTable<T extends { id: string }>({
           </div>
         )}
 
-        <div className="flex items-center space-x-2">
+        {/* Right Actions */}
+        <div className="flex flex-wrap items-center gap-2">
           {onViewsClick && (
             <Button
               variant="outline"
@@ -295,7 +322,7 @@ export function DataTable<T extends { id: string }>({
               className="flex items-center space-x-2 bg-transparent"
             >
               <Eye className="h-4 w-4" />
-              <span>Views</span>
+              <span className="hidden sm:inline">Views</span>
             </Button>
           )}
           {onSaveView && (
@@ -306,7 +333,7 @@ export function DataTable<T extends { id: string }>({
               className="flex items-center space-x-2 bg-transparent"
             >
               <Bookmark className="h-4 w-4" />
-              <span>Save View</span>
+              <span className="hidden sm:inline">Save View</span>
             </Button>
           )}
         </div>
@@ -369,20 +396,21 @@ export function DataTable<T extends { id: string }>({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-sm text-muted-foreground text-center sm:text-left">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of{" "}
             {filteredData.length} results
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
+              className="flex items-center space-x-1"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              <span className="hidden sm:inline">Previous</span>
             </Button>
             <div className="flex items-center space-x-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -405,8 +433,9 @@ export function DataTable<T extends { id: string }>({
               size="sm"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
+              className="flex items-center space-x-1"
             >
-              Next
+              <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

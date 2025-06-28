@@ -4,24 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
-import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
 import { PageHeader } from "@/components/ui/page-header"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  Plus,
-  Play,
-  Pause,
-  Settings,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Target,
-  MoreHorizontal,
-  Calendar,
-  Building,
-} from "lucide-react"
+import { Plus, Play, Pause, CheckCircle, Clock, AlertCircle, Target, MoreHorizontal, Calendar } from "lucide-react"
 
 interface Intent {
   id: string
@@ -29,15 +17,13 @@ interface Intent {
   description: string
   type: "checkin" | "cleaning" | "review" | "maintenance"
   status: "active" | "paused" | "draft"
-  priority: "low" | "medium" | "high" | "urgent"
+  priority: "urgent" | "high" | "medium" | "low"
   triggerCount: number
   successRate: number
   lastTriggered: string
   properties: number
   source: string
   createdAt: string
-  resolvedBy?: string
-  resolvedAt?: string
 }
 
 const mockIntents: Intent[] = [
@@ -52,8 +38,8 @@ const mockIntents: Intent[] = [
     successRate: 98.5,
     lastTriggered: "2024-01-20T14:30:00Z",
     properties: 8,
-    source: "automation",
-    createdAt: "2024-01-15T10:00:00Z",
+    source: "system",
+    createdAt: "2023-12-01T10:00:00Z",
   },
   {
     id: "2",
@@ -67,7 +53,7 @@ const mockIntents: Intent[] = [
     lastTriggered: "2024-01-19T10:15:00Z",
     properties: 12,
     source: "manual",
-    createdAt: "2024-01-10T14:30:00Z",
+    createdAt: "2023-11-15T14:30:00Z",
   },
   {
     id: "3",
@@ -75,13 +61,13 @@ const mockIntents: Intent[] = [
     description: "Notify cleaning team 1 hour before checkout and schedule cleaning",
     type: "cleaning",
     status: "paused",
-    priority: "high",
+    priority: "urgent",
     triggerCount: 234,
     successRate: 94.2,
     lastTriggered: "2024-01-18T16:45:00Z",
     properties: 15,
     source: "system",
-    createdAt: "2024-01-05T09:15:00Z",
+    createdAt: "2023-10-20T09:00:00Z",
   },
   {
     id: "4",
@@ -95,35 +81,7 @@ const mockIntents: Intent[] = [
     lastTriggered: "",
     properties: 0,
     source: "manual",
-    createdAt: "2024-01-22T11:00:00Z",
-  },
-  {
-    id: "5",
-    name: "Late Checkout Notification",
-    description: "Alert property managers when guests exceed checkout time",
-    type: "checkin",
-    status: "active",
-    priority: "urgent",
-    triggerCount: 45,
-    successRate: 89.2,
-    lastTriggered: "2024-01-21T11:30:00Z",
-    properties: 6,
-    source: "automation",
-    createdAt: "2024-01-12T16:20:00Z",
-  },
-  {
-    id: "6",
-    name: "Weekly Property Inspection",
-    description: "Schedule weekly property inspections for maintenance team",
-    type: "maintenance",
-    status: "active",
-    priority: "medium",
-    triggerCount: 78,
-    successRate: 95.1,
-    lastTriggered: "2024-01-19T09:00:00Z",
-    properties: 20,
-    source: "system",
-    createdAt: "2024-01-08T14:45:00Z",
+    createdAt: "2024-01-15T11:20:00Z",
   },
 ]
 
@@ -132,7 +90,13 @@ export default function IntentsPage() {
   const router = useRouter()
   const [intents, setIntents] = useState<Intent[]>(mockIntents)
   const [loading] = useState(false)
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [selectedIntents, setSelectedIntents] = useState<string[]>([])
+  const [isAllSelected, setIsAllSelected] = useState(false)
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: "",
+    type: "",
+    priority: "",
+  })
 
   useEffect(() => {
     dispatch(setActiveTab("intents"))
@@ -165,7 +129,6 @@ export default function IntentsPage() {
       paused: { color: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30", text: "Paused" },
       draft: { color: "bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30", text: "Draft" },
     }
-
     const config = statusConfig[status.toLowerCase()] || statusConfig.draft
     return <Badge className={`${config.color} border`}>{config.text}</Badge>
   }
@@ -177,9 +140,8 @@ export default function IntentsPage() {
       medium: { color: "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30", text: "Medium" },
       low: { color: "bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30", text: "Low" },
     }
-
     const config = priorityConfig[priority.toLowerCase()] || priorityConfig.medium
-    return <Badge className={`${config.color} border text-xs`}>{config.text}</Badge>
+    return <Badge className={`${config.color} border`}>{config.text}</Badge>
   }
 
   const formatDate = (dateString: string) => {
@@ -200,39 +162,37 @@ export default function IntentsPage() {
   const handleToggleIntent = (intentId: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "paused" : "active"
     setIntents((prev) =>
-      prev.map((intent) => (intent.id === intentId ? { ...intent, status: newStatus as Intent["status"] } : intent)),
+      prev.map((intent) =>
+        intent.id === intentId ? { ...intent, status: newStatus as "active" | "paused" | "draft" } : intent,
+      ),
     )
   }
 
   const handleEditIntent = (intentId: string) => {
+    router.push(`/intents/${intentId}/edit`)
+  }
+
+  const handleViewIntent = (intentId: string) => {
     router.push(`/intents/${intentId}`)
   }
 
-  const handleViewIntent = (intent: Intent) => {
+  const handleRowClick = (intent: Intent) => {
     router.push(`/intents/${intent.id}`)
   }
 
-  const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedItems(selectedIds)
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedItems(intents.map((intent) => intent.id))
-    } else {
-      setSelectedItems([])
-    }
+  const handleFilterChange = (filterKey: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [filterKey]: value }))
   }
 
   const handleExport = () => {
-    console.log("Export intents")
+    console.log("Exporting intents data...")
   }
 
   const handleShare = () => {
-    console.log("Share intents")
+    console.log("Sharing intents data...")
   }
 
-   const handleViewsClick = () => {
+  const handleViewsClick = () => {
     console.log("Opening views...")
   }
 
@@ -240,17 +200,57 @@ export default function IntentsPage() {
     console.log("Saving current view...")
   }
 
+  const tableFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      value: filters.status,
+      options: [
+        { value: "active", label: "Active" },
+        { value: "paused", label: "Paused" },
+        { value: "draft", label: "Draft" },
+      ],
+    },
+    {
+      key: "type",
+      label: "Type",
+      type: "select",
+      value: filters.type,
+      options: [
+        { value: "checkin", label: "Check-in" },
+        { value: "cleaning", label: "Cleaning" },
+        { value: "review", label: "Review" },
+        { value: "maintenance", label: "Maintenance" },
+      ],
+    },
+    {
+      key: "priority",
+      label: "Priority",
+      type: "select",
+      value: filters.priority,
+      options: [
+        { value: "urgent", label: "Urgent" },
+        { value: "high", label: "High" },
+        { value: "medium", label: "Medium" },
+        { value: "low", label: "Low" },
+      ],
+    },
+  ]
+
   const columns: DataTableColumn<Intent>[] = [
     {
-      key: "name",
+      key: "intent",
       header: "Intent",
       width: "w-80",
       render: (intent) => (
-        <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg border ${getTypeColor(intent.type)}`}>{getTypeIcon(intent.type)}</div>
-          <div className="min-w-0 flex-1">
+        <div className="flex items-start space-x-3">
+          <div className={`p-2 rounded-lg border ${getTypeColor(intent.type)} flex-shrink-0`}>
+            {getTypeIcon(intent.type)}
+          </div>
+          <div className="space-y-1 min-w-0">
             <div className="font-medium text-foreground truncate">{intent.name}</div>
-            <div className="text-sm text-muted-foreground truncate max-w-xs">{intent.description}</div>
+            <div className="text-sm text-muted-foreground line-clamp-2">{intent.description}</div>
           </div>
         </div>
       ),
@@ -260,7 +260,7 @@ export default function IntentsPage() {
       header: "Type",
       width: "w-24",
       render: (intent) => (
-        <Badge variant="outline" className="capitalize">
+        <Badge variant="outline" className="text-xs capitalize">
           {intent.type}
         </Badge>
       ),
@@ -277,160 +277,86 @@ export default function IntentsPage() {
       width: "w-24",
       render: (intent) => getPriorityBadge(intent.priority),
     },
-    // {
-    //   key: "triggerCount",
-    //   header: "Triggers",
-    //   width: "w-20",
-    //   render: (intent) => (
-    //     <div className="text-center">
-    //       <div className="font-medium">{intent.triggerCount.toLocaleString()}</div>
-    //     </div>
-    //   ),
-    // },
-    // {
-    //   key: "successRate",
-    //   header: "Success Rate",
-    //   width: "w-24",
-    //   render: (intent) => {
-    //     if (intent.status === "draft" || intent.successRate === 0) {
-    //       return <span className="text-muted-foreground">-</span>
-    //     }
-    //     return (
-    //       <div className="text-center">
-    //         <div className="font-medium">{intent.successRate}%</div>
-    //       </div>
-    //     )
-    //   },
-    // },
-    // {
-    //   key: "properties",
-    //   header: "Properties",
-    //   width: "w-24",
-    //   render: (intent) => (
-    //     <div className="flex items-center space-x-1">
-    //       <Building className="h-4 w-4 text-muted-foreground" />
-    //       <span className="font-medium">{intent.properties}</span>
-    //     </div>
-    //   ),
-    // },
-    // {
-    //   key: "lastTriggered",
-    //   header: "Last Triggered",
-    //   width: "w-32",
-    //   render: (intent) => (
-    //     <div className="flex items-center space-x-1">
-    //       <Calendar className="h-4 w-4 text-muted-foreground" />
-    //       <span className="text-sm">{formatDate(intent.lastTriggered)}</span>
-    //     </div>
-    //   ),
-    // }
   ]
 
-  const filters: DataTableFilter[] = [
-    {
-      key: "status",
-      label: "Status",
-      type: "select",
-      value: "",
-      options: [
-        { value: "active", label: "Active" },
-        { value: "paused", label: "Paused" },
-        { value: "draft", label: "Draft" },
-      ],
-    },
-    {
-      key: "type",
-      label: "Type",
-      type: "select",
-      value: "",
-      options: [
-        { value: "checkin", label: "Check-in" },
-        { value: "cleaning", label: "Cleaning" },
-        { value: "review", label: "Review" },
-        { value: "maintenance", label: "Maintenance" },
-      ],
-    },
-    {
-      key: "priority",
-      label: "Priority",
-      type: "select",
-      value: "",
-      options: [
-        { value: "urgent", label: "Urgent" },
-        { value: "high", label: "High" },
-        { value: "medium", label: "Medium" },
-        { value: "low", label: "Low" },
-      ],
-    },
-  ]
-
-  const handleFilterChange = (filterKey: string, value: string) => {
-    // Update filter state if needed
-    console.log(`Filter ${filterKey} changed to ${value}`)
+  const handleSelectionChange = (selectedIds: string[]) => {
+    setSelectedIntents(selectedIds)
+    setIsAllSelected(selectedIds.length === intents.length && intents.length > 0)
   }
 
-  if (loading) {
-    return (
-      <div className="p-8 bg-background min-h-screen">
-        <div className="animate-pulse space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="h-8 w-48 bg-muted rounded"></div>
-              <div className="h-4 w-64 bg-muted rounded"></div>
-            </div>
-            <div className="h-10 w-32 bg-muted rounded"></div>
-          </div>
-          <div className="h-96 bg-muted rounded-lg"></div>
-        </div>
-      </div>
-    )
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIntents(intents.map((intent) => intent.id))
+      setIsAllSelected(true)
+    } else {
+      setSelectedIntents([])
+      setIsAllSelected(false)
+    }
   }
 
   return (
-    <div className="p-8 bg-background min-h-screen">
-      <PageHeader
-        title="Intents"
-        description="Automate guest communication and property management workflows"
-        buttonText="Create Intent"
-        buttonIcon={Plus}
-        onButtonClick={handleCreateIntent}
-      />
+    <div className="flex flex-col h-full">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+        <PageHeader
+          title="Intents"
+          description="Automate guest communication and property management workflows"
+          buttonText="Create Intent"
+          buttonIcon={Plus}
+          onButtonClick={handleCreateIntent}
+        />
 
-      <DataTable
-        data={intents}
-        columns={columns}
-        loading={loading}
-        searchable={true}
-        searchPlaceholder="Search intents by name or description..."
-        selectable={true}
-        selectedItems={selectedItems}
-        onSelectionChange={handleSelectionChange}
-        onSelectAll={handleSelectAll}
-        isAllSelected={selectedItems.length === intents.length && intents.length > 0}
-        onRowClick={handleViewIntent}
-        emptyMessage="No intents found"
-        emptyDescription="Create your first automation intent to streamline your property management workflow."
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onExport={handleExport}
-        onShare={handleShare}
-        onViewsClick={handleViewsClick}
-        onSaveView={handleSaveView}
-      />
+        {selectedIntents.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-accent/50 rounded-lg border border-border">
+            <span className="text-sm text-foreground">{selectedIntents.length} intent(s) selected</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedIntents([])}
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Enable Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-border text-foreground hover:bg-accent bg-transparent"
+              >
+                Disable Selected
+              </Button>
+            </div>
+          </div>
+        )}
 
-      {intents.length === 0 && (
-        <div className="text-center py-12">
-          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No intents created yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Create your first automation intent to streamline your property management workflow.
-          </p>
-          <Button onClick={handleCreateIntent} className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Create Your First Intent</span>
-          </Button>
-        </div>
-      )}
+        <DataTable
+          data={intents}
+          columns={columns}
+          loading={loading}
+          searchable
+          searchPlaceholder="Search intents..."
+          selectable
+          selectedItems={selectedIntents}
+          onSelectionChange={handleSelectionChange}
+          onSelectAll={handleSelectAll}
+          isAllSelected={isAllSelected}
+          onRowClick={handleRowClick}
+          emptyMessage="No intents found"
+          emptyDescription="Create your first automation intent to streamline workflows"
+          filters={tableFilters}
+          onFilterChange={handleFilterChange}
+          onExport={handleExport}
+          onShare={handleShare}
+          onViewsClick={handleViewsClick}
+          onSaveView={handleSaveView}
+        />
+      </div>
     </div>
   )
 }
