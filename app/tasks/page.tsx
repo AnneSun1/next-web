@@ -4,12 +4,13 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAppDispatch } from "@/lib/hooks"
 import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table"
+import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CalendarDays, Clock, MapPin, Plus } from "lucide-react"
 import { TASK_STATUS, TASK_PRIORITY, TASK_TYPE, type Task } from "@/types/task"
+import { PageHeader } from "@/components/ui/page-header"
 
 // Mock data for tasks
 const mockTasks: Task[] = [
@@ -186,6 +187,13 @@ export default function TasksPage() {
   const dispatch = useAppDispatch()
   const router = useRouter()
   const [selectedTasks, setSelectedTasks] = useState<string[]>([])
+  const [isAllSelected, setIsAllSelected] = useState(false)
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: "",
+    priority: "",
+    taskTypeCode: "",
+    assigneeId: "",
+  })
 
   useEffect(() => {
     dispatch(setActiveTab("tasks"))
@@ -194,6 +202,98 @@ export default function TasksPage() {
   const handleTaskClick = (task: Task) => {
     router.push(`/tasks/${task.id}`)
   }
+
+  const handleFilterChange = (filterKey: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [filterKey]: value }))
+  }
+
+  const handleAddTask = () => {
+    router.push("tasks/new")
+  }
+
+  const handleExport = () => {
+    console.log("Exporting tasks data...")
+  }
+
+  const handleShare = () => {
+    console.log("Sharing tasks data...")
+  }
+
+  const handleViewsClick = () => {
+    console.log("Opening views...")
+  }
+
+  const handleSaveView = () => {
+    console.log("Saving current view...")
+  }
+
+  const handleSelectionChange = (selectedIds: string[]) => {
+    setSelectedTasks(selectedIds)
+    setIsAllSelected(selectedIds.length === mockTasks.length && mockTasks.length > 0)
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTasks(mockTasks.map((task) => task.id))
+      setIsAllSelected(true)
+    } else {
+      setSelectedTasks([])
+      setIsAllSelected(false)
+    }
+  }
+
+  const tableFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "",
+      type: "select",
+      value: filters.status,
+      options: [
+        { value: "PENDING", label: "Pending" },
+        { value: "IN_PROGRESS", label: "In Progress" },
+        { value: "COMPLETED", label: "Completed" },
+        { value: "CANCELLED", label: "Cancelled" },
+        { value: "ON_HOLD", label: "On Hold" },
+      ],
+    },
+    {
+      key: "priority",
+      label: "",
+      type: "select",
+      value: filters.priority,
+      options: [
+        { value: "LOW", label: "Low" },
+        { value: "MEDIUM", label: "Medium" },
+        { value: "HIGH", label: "High" },
+        { value: "URGENT", label: "Urgent" },
+      ],
+    },
+    {
+      key: "taskTypeCode",
+      label: "",
+      type: "select",
+      value: filters.taskTypeCode,
+      options: [
+        { value: "CLEANING", label: "Cleaning" },
+        { value: "MAINTENANCE", label: "Maintenance" },
+        { value: "INSPECTION", label: "Inspection" },
+        { value: "GUEST_SERVICE", label: "Guest Service" },
+        { value: "ADMINISTRATIVE", label: "Administrative" },
+      ],
+    },
+    {
+      key: "assigneeId",
+      label: "",
+      type: "select",
+      value: filters.assigneeId,
+      options: [
+        { value: "user-1", label: "User 1" },
+        { value: "user-2", label: "User 2" },
+        { value: "user-3", label: "User 3" },
+        { value: "user-4", label: "User 4" },
+      ],
+    },
+  ]
 
   const columns: DataTableColumn<Task>[] = [
     {
@@ -274,16 +374,44 @@ export default function TasksPage() {
 
   return (
     <div className="p-8 bg-background min-h-screen">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Tasks</h1>
-          <p className="text-muted-foreground">Manage and track all property tasks</p>
+
+      <PageHeader
+        title="Tasks"
+        description="Manage and track all property tasks"
+        buttonText="Create Task"
+        buttonIcon={Plus}
+        onButtonClick={handleAddTask}
+        />
+
+      {selectedTasks.length > 0 && (
+        <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
+          <span className="text-sm text-foreground">{selectedTasks.length} task(s) selected</span>
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedTasks([])}
+              className="border-border text-foreground hover:bg-accent bg-transparent"
+            >
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-border text-foreground hover:bg-accent bg-transparent"
+            >
+              Update Status
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-border text-foreground hover:bg-accent bg-transparent"
+            >
+              Assign Tasks
+            </Button>
+          </div>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700">
-          <Plus className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
-      </div>
+      )}
 
       <DataTable
         data={mockTasks}
@@ -292,10 +420,18 @@ export default function TasksPage() {
         searchPlaceholder="Search tasks..."
         selectable
         selectedItems={selectedTasks}
-        onSelectionChange={setSelectedTasks}
+        onSelectionChange={handleSelectionChange}
+        onSelectAll={handleSelectAll}
+        isAllSelected={isAllSelected}
         onRowClick={handleTaskClick}
         emptyMessage="No tasks found"
         emptyDescription="Create your first task to get started"
+        filters={tableFilters}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        onShare={handleShare}
+        onViewsClick={handleViewsClick}
+        onSaveView={handleSaveView}
       />
     </div>
   )

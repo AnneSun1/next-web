@@ -76,10 +76,10 @@ export default function GuestGuidePage() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Guest Guide</h1>
-          <p className="text-gray-400">Create and manage comprehensive guides for your guests</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Guest Guide</h1>
+          <p className="text-muted-foreground">Create and manage comprehensive guides for your guests</p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <Plus className="h-4 w-4 mr-2" />
           Create New Guide
         </Button>
@@ -87,24 +87,31 @@ export default function GuestGuidePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <h2 className="text-xl font-semibold text-white mb-4">Your Guides</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Your Guides</h2>
           <div className="space-y-4">
             {guides.map((guide) => (
-              <Card key={guide.id} className="bg-gray-900 border-gray-800">
+              <Card key={guide.id} className="bg-card border-border hover:bg-accent/50 transition-colors">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <BookOpen className="h-5 w-5 text-purple-500" />
-                        <h3 className="font-semibold text-white">{guide.title}</h3>
-                        <Badge className={guide.status === "Published" ? "bg-green-600" : "bg-yellow-600"}>
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-foreground">{guide.title}</h3>
+                        <Badge
+                          variant={guide.status === "Published" ? "default" : "secondary"}
+                          className={
+                            guide.status === "Published"
+                              ? "bg-green-600 hover:bg-green-700 text-white"
+                              : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                          }
+                        >
                           {guide.status}
                         </Badge>
                       </div>
 
-                      <p className="text-gray-400 text-sm mb-3">{guide.property}</p>
+                      <p className="text-muted-foreground text-sm mb-3">{guide.property}</p>
 
-                      <div className="flex items-center space-x-6 text-sm text-gray-500">
+                      <div className="flex items-center space-x-6 text-sm text-muted-foreground">
                         <span>Last updated: {guide.lastUpdated}</span>
                         <span>{guide.sections} sections</span>
                         <span>{guide.views} views</span>
@@ -115,7 +122,7 @@ export default function GuestGuidePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-transparent border-gray-700 text-white hover:bg-gray-800"
+                        className="border-border text-foreground hover:bg-accent bg-transparent"
                       >
                         <Eye className="h-3 w-3 mr-1" />
                         Preview
@@ -123,7 +130,7 @@ export default function GuestGuidePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-transparent border-gray-700 text-white hover:bg-gray-800"
+                        className="border-border text-foreground hover:bg-accent bg-transparent"
                       >
                         <Edit className="h-3 w-3 mr-1" />
                         Edit
@@ -137,40 +144,39 @@ export default function GuestGuidePage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-white mb-4">Guide Templates</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Guide Templates</h2>
           <div className="space-y-3">
             {guideTemplates.map((template, index) => (
-              <Card
-                key={index}
-                className="bg-gray-900 border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors"
-              >
+              <Card key={index} className="bg-card border-border cursor-pointer hover:bg-accent transition-colors">
                 <CardContent className="p-4">
-                  <h4 className="font-medium text-white mb-1">{template.title}</h4>
-                  <p className="text-sm text-gray-400">{template.description}</p>
+                  <h4 className="font-medium text-foreground mb-1">{template.title}</h4>
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <Card className="bg-gray-900 border-gray-800 mt-6">
+          <Card className="bg-card border-border mt-6">
             <CardHeader>
-              <CardTitle className="text-white text-lg">Quick Stats</CardTitle>
+              <CardTitle className="text-foreground text-lg">Quick Stats</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Total Guides</span>
-                  <span className="text-white font-medium">{guides.length}</span>
+                  <span className="text-muted-foreground">Total Guides</span>
+                  <span className="text-foreground font-medium">{guides.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Published</span>
-                  <span className="text-white font-medium">
+                  <span className="text-muted-foreground">Published</span>
+                  <span className="text-foreground font-medium">
                     {guides.filter((g) => g.status === "Published").length}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Total Views</span>
-                  <span className="text-white font-medium">{guides.reduce((sum, guide) => sum + guide.views, 0)}</span>
+                  <span className="text-muted-foreground">Total Views</span>
+                  <span className="text-foreground font-medium">
+                    {guides.reduce((sum, guide) => sum + guide.views, 0)}
+                  </span>
                 </div>
               </div>
             </CardContent>

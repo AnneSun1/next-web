@@ -55,4 +55,9 @@ export interface Task {
   updatedBy?: number
   createdAt?: string
   updatedAt?: string
+
+  listingNickname?: string
+  listingFullAddress?: string
+  comments?: Comment[]
+  attachments?: string[]
 }

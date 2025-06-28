@@ -14,6 +14,9 @@ import {
   User,
   LogOut,
   FileText,
+  Crown,
+  UserCheck,
+  Target,
 } from "lucide-react"
 
 import {
@@ -39,16 +42,22 @@ const navigationItems = [
     key: "dashboard",
   },
   {
+    title: "Inbox",
+    url: "/inbox",
+    icon: Mail,
+    key: "inbox",
+  },
+  {
     title: "Properties",
     url: "/properties",
     icon: Building2,
     key: "properties",
   },
   {
-    title: "Inbox",
-    url: "/inbox",
-    icon: Mail,
-    key: "inbox",
+    title: "Intents",
+    url: "/intents",
+    icon: Target,
+    key: "intents",
   },
   {
     title: "Tasks",
@@ -63,16 +72,28 @@ const navigationItems = [
     key: "reservations",
   },
   {
-    title: "Guest Guide",
-    url: "/guest-guide",
-    icon: BookOpen,
-    key: "guest-guide",
-  },
-  {
     title: "Users",
     url: "/users",
     icon: Users,
     key: "users",
+  },
+  {
+    title: "Owners",
+    url: "/owners",
+    icon: Crown,
+    key: "owners",
+  },
+  {
+    title: "Guests",
+    url: "/guests",
+    icon: UserCheck,
+    key: "guests",
+  },
+  {
+    title: "Guest Guide",
+    url: "/guest-guide",
+    icon: BookOpen,
+    key: "guest-guide",
   },
   {
     title: "Settings",
@@ -86,6 +107,7 @@ const navigationItems = [
     icon: User,
     key: "profile",
   },
+
 ]
 
 const bottomItems = [

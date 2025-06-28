@@ -5,6 +5,8 @@ import { PropertyCard } from "@/components/property-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { PageHeader } from "@/components/ui/page-header"
 
 // Mock data for properties
 const mockProperties = [
@@ -101,6 +103,7 @@ const mockProperties = [
 
 export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter()
 
   const filteredProperties = mockProperties.filter(
     (property) =>
@@ -108,17 +111,22 @@ export default function PropertiesPage() {
       property.location.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  const handleAddProperty = () => {
+    router.push("/properties/new")
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Properties</h1>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Property
-          </Button>
-        </div>
+        
+          <PageHeader
+            title="Properties"
+            description="Manage property owners and partnerships"
+            buttonText="Add Property"
+            buttonIcon={Plus}
+            onButtonClick={handleAddProperty}
+          />
 
         {/* Search */}
         <div className="relative mb-6">

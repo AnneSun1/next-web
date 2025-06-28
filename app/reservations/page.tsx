@@ -9,8 +9,8 @@ import { setActiveTab } from "@/lib/features/navigation/navigationSlice"
 import { useReservations } from "@/hooks/useReservations"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table"
+import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
+import { PageHeader } from "@/components/ui/page-header"
 import { ReservationViewModal } from "@/components/modals/reservation-view-modal"
 import { ReservationEditModal } from "@/components/modals/reservation-edit-modal"
 import { Plus, Eye, Edit, Calendar, MapPin, Users, DollarSign } from "lucide-react"
@@ -19,17 +19,32 @@ import type { Reservation } from "@/types/reservation"
 export default function ReservationsPage() {
   const dispatch = useAppDispatch()
   const router = useRouter()
-  const { reservations, loading, error } = useReservations()
-  const [selectedReservations, setSelectedReservations] = useState<string[]>([])
-  const [isAllSelected, setIsAllSelected] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const {
+    reservations,
+    loading,
+    error,
+    fetchReservations,
+    selectedReservationIds,
+    setSelectedIds,
+    selectAll,
+    clearSelection,
+    isAllSelected,
+  } = useReservations()
+
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: "",
+    property: "",
+    checkInDate: "",
+  })
 
   useEffect(() => {
     dispatch(setActiveTab("reservations"))
-  }, [dispatch])
+    // Fetch reservations when component mounts
+    fetchReservations()
+  }, [dispatch, fetchReservations])
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { color: string; text: string }> = {
@@ -69,6 +84,10 @@ export default function ReservationsPage() {
     router.push(`/reservations/${reservation.id}`)
   }
 
+  const handleNewReservation = () => {
+    router.push("/reservations/new")
+  }
+
   const handleViewReservation = (reservation: Reservation, event: React.MouseEvent) => {
     event.stopPropagation()
     setSelectedReservation(reservation)
@@ -81,10 +100,54 @@ export default function ReservationsPage() {
     setEditModalOpen(true)
   }
 
-  const filteredReservations = reservations.filter((reservation) => {
-    if (statusFilter === "all") return true
-    return reservation.status.toLowerCase() === statusFilter.toLowerCase()
-  })
+  const handleFilterChange = (filterKey: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [filterKey]: value }))
+  }
+
+  const handleExport = () => {
+    console.log("Exporting reservations data...")
+  }
+
+  const handleShare = () => {
+    console.log("Sharing reservations data...")
+  }
+
+  const handleViewsClick = () => {
+    console.log("Opening views...")
+  }
+
+  const handleSaveView = () => {
+    console.log("Saving current view...")
+  }
+
+  const tableFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      value: filters.status,
+      options: [
+        { value: "confirmed", label: "Confirmed" },
+        { value: "pending", label: "Pending" },
+        { value: "cancelled", label: "Cancelled" },
+        { value: "completed", label: "Completed" },
+      ],
+    },
+    {
+      key: "property",
+      label: "Property",
+      type: "text",
+      value: filters.property,
+      placeholder: "Filter by property name",
+    },
+    {
+      key: "checkInDate",
+      label: "Check-in Date",
+      type: "date",
+      value: filters.checkInDate,
+      placeholder: "Filter by check-in date",
+    },
+  ]
 
   const columns: DataTableColumn<Reservation>[] = [
     {
@@ -93,8 +156,8 @@ export default function ReservationsPage() {
       width: "w-64",
       render: (reservation) => (
         <div className="space-y-1">
-          <div className="font-medium text-foreground">{reservation.guestName}</div>
-          <div className="text-sm text-muted-foreground">{reservation.guestEmail}</div>
+          <div className="font-medium text-foreground">{reservation.guest_full_name}</div>
+          <div className="text-sm text-muted-foreground">{reservation.guest?.email || "No email"}</div>
           <div className="text-xs text-muted-foreground">ID: {reservation.id}</div>
         </div>
       ),
@@ -106,7 +169,7 @@ export default function ReservationsPage() {
       render: (reservation) => (
         <div className="flex items-center space-x-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">{reservation.propertyName}</span>
+          <span className="text-foreground">{reservation.listing?.name || `Property ${reservation.listing_id}`}</span>
         </div>
       ),
     },
@@ -119,12 +182,10 @@ export default function ReservationsPage() {
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-foreground">
-              {formatDate(reservation.checkInDate)} - {formatDate(reservation.checkOutDate)}
+              {formatDate(reservation.check_in)} - {formatDate(reservation.check_out)}
             </span>
           </div>
-          <div className="text-xs text-muted-foreground">
-            {calculateNights(reservation.checkInDate, reservation.checkOutDate)} nights
-          </div>
+          <div className="text-xs text-muted-foreground">{reservation.nights_count} nights</div>
         </div>
       ),
     },
@@ -135,7 +196,7 @@ export default function ReservationsPage() {
       render: (reservation) => (
         <div className="flex items-center space-x-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-foreground">{reservation.guestCount}</span>
+          <span className="text-foreground">{reservation.guestscount}</span>
         </div>
       ),
     },
@@ -146,7 +207,7 @@ export default function ReservationsPage() {
       render: (reservation) => (
         <div className="flex items-center space-x-2">
           <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium text-foreground">{formatCurrency(reservation.totalAmount)}</span>
+          <span className="font-medium text-foreground">{formatCurrency(reservation.amount || 0)}</span>
         </div>
       ),
     },
@@ -154,7 +215,7 @@ export default function ReservationsPage() {
       key: "status",
       header: "Status",
       width: "w-32",
-      render: (reservation) => getStatusBadge(reservation.status),
+      render: (reservation) => getStatusBadge(reservation.reservation_status_code),
     },
     {
       key: "actions",
@@ -184,17 +245,14 @@ export default function ReservationsPage() {
   ]
 
   const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedReservations(selectedIds)
-    setIsAllSelected(selectedIds.length === filteredReservations.length && filteredReservations.length > 0)
+    setSelectedIds(selectedIds.map((id) => Number.parseInt(id)))
   }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedReservations(filteredReservations.map((reservation) => reservation.id))
-      setIsAllSelected(true)
+      selectAll()
     } else {
-      setSelectedReservations([])
-      setIsAllSelected(false)
+      clearSelection()
     }
   }
 
@@ -211,52 +269,25 @@ export default function ReservationsPage() {
 
   return (
     <div className="p-8 bg-background min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Reservations</h1>
-          <p className="text-muted-foreground">Manage guest bookings and reservations</p>
-        </div>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          New Reservation
-        </Button>
-      </div>
+      <PageHeader
+        title="Reservations"
+        description="Manage guest bookings and reservations"
+        buttonText="New Reservation"
+        buttonIcon={Plus}
+        onButtonClick={handleNewReservation}
+      />
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 bg-muted border-border text-foreground">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent className="bg-background border-border">
-              <SelectItem value="all" className="text-foreground hover:bg-accent">
-                All Statuses
-              </SelectItem>
-              <SelectItem value="confirmed" className="text-foreground hover:bg-accent">
-                Confirmed
-              </SelectItem>
-              <SelectItem value="pending" className="text-foreground hover:bg-accent">
-                Pending
-              </SelectItem>
-              <SelectItem value="cancelled" className="text-foreground hover:bg-accent">
-                Cancelled
-              </SelectItem>
-              <SelectItem value="completed" className="text-foreground hover:bg-accent">
-                Completed
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedReservations.length > 0 && (
+      {selectedReservationIds.length > 0 && (
+        <div className="flex items-center justify-between mb-6 p-4 bg-accent/50 rounded-lg border border-border">
+          <span className="text-sm text-foreground">{selectedReservationIds.length} reservation(s) selected</span>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">{selectedReservations.length} selected</span>
             <Button
               size="sm"
               variant="outline"
+              onClick={clearSelection}
               className="border-border text-foreground hover:bg-accent bg-transparent"
             >
-              Cancel
+              Clear
             </Button>
             <Button
               size="sm"
@@ -273,23 +304,29 @@ export default function ReservationsPage() {
               Export
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <DataTable
-        data={filteredReservations}
+        data={reservations}
         columns={columns}
-        loading={loading}
+        loading={loading.list}
         searchable
         searchPlaceholder="Search reservations..."
         selectable
-        selectedItems={selectedReservations}
+        selectedItems={selectedReservationIds.map((id) => String(id))}
         onSelectionChange={handleSelectionChange}
         onSelectAll={handleSelectAll}
         isAllSelected={isAllSelected}
         onRowClick={handleRowClick}
         emptyMessage="No reservations found"
         emptyDescription="Create your first reservation to get started"
+        filters={tableFilters}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+        onShare={handleShare}
+        onViewsClick={handleViewsClick}
+        onSaveView={handleSaveView}
       />
 
       {selectedReservation && (
