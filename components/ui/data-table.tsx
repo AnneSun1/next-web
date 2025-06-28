@@ -312,56 +312,58 @@ export function DataTable<T extends { id: string }>({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-border rounded-lg bg-card">
-        {/* Header */}
-        <div className="border-b border-border bg-muted/50">
-          <div className="flex items-center px-4 py-3">
-            {selectable && (
-              <div className="w-12 flex items-center">
-                <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} aria-label="Select all" />
-              </div>
-            )}
-            {columns.map((column) => (
-              <div key={column.key} className={`${column.width || "flex-1"} px-2`}>
-                <span className="text-sm font-medium text-foreground">{column.header}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Body */}
-        <div>
-          {paginatedData.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground mb-2">{emptyMessage}</div>
-              <div className="text-sm text-muted-foreground">{emptyDescription}</div>
+      {/* Table Container with Horizontal Scroll */}
+      <div className="w-full overflow-x-auto">
+        <div className="border border-border rounded-lg bg-card min-w-max">
+          {/* Header */}
+          <div className="border-b border-border bg-muted/50">
+            <div className="flex items-center px-4 py-3 min-w-max">
+              {selectable && (
+                <div className="w-12 flex items-center flex-shrink-0">
+                  <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} aria-label="Select all" />
+                </div>
+              )}
+              {columns.map((column) => (
+                <div key={column.key} className={`${column.width || "flex-1 min-w-[150px]"} px-2 flex-shrink-0`}>
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">{column.header}</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            paginatedData.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => handleRowClick(item)}
-              >
-                {selectable && (
-                  <div className="w-12 flex items-center">
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={(checked) => handleSelectionChange(item.id, checked as boolean)}
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`Select item ${item.id}`}
-                    />
-                  </div>
-                )}
-                {columns.map((column) => (
-                  <div key={column.key} className={`${column.width || "flex-1"} px-2`}>
-                    {column.render(item)}
-                  </div>
-                ))}
+          </div>
+
+          {/* Body */}
+          <div>
+            {paginatedData.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-muted-foreground mb-2">{emptyMessage}</div>
+                <div className="text-sm text-muted-foreground">{emptyDescription}</div>
               </div>
-            ))
-          )}
+            ) : (
+              paginatedData.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors min-w-max"
+                  onClick={() => handleRowClick(item)}
+                >
+                  {selectable && (
+                    <div className="w-12 flex items-center flex-shrink-0">
+                      <Checkbox
+                        checked={selectedItems.includes(item.id)}
+                        onCheckedChange={(checked) => handleSelectionChange(item.id, checked as boolean)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Select item ${item.id}`}
+                      />
+                    </div>
+                  )}
+                  {columns.map((column) => (
+                    <div key={column.key} className={`${column.width || "flex-1 min-w-[150px]"} px-2 flex-shrink-0`}>
+                      {column.render(item)}
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

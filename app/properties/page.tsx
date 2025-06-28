@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { PropertyCard } from "@/components/property-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, Plus } from "lucide-react"
+import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/ui/data-table"
+import { Badge } from "@/components/ui/badge"
+import { Plus, MapPin, Bed, Bath, Square } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/ui/page-header"
 
@@ -101,57 +100,160 @@ const mockProperties = [
   },
 ]
 
-export default function PropertiesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const router = useRouter()
+type Property = (typeof mockProperties)[0]
 
-  const filteredProperties = mockProperties.filter(
-    (property) =>
-      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+export default function PropertiesPage() {
+  const router = useRouter()
+  const [filters, setFilters] = useState<Record<string, string>>({
+    status: "",
+    bedrooms: "",
+  })
 
   const handleAddProperty = () => {
     router.push("/properties/new")
   }
 
+  const handleRowClick = (property: Property) => {
+    router.push(`/properties/${property.id}`)
+  }
+
+  const handleFilterChange = (filterKey: string, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterKey]: value,
+    }))
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "available":
+        return "default"
+      case "occupied":
+        return "secondary"
+      case "maintenance":
+        return "destructive"
+      default:
+        return "outline"
+    }
+  }
+
+  const columns: DataTableColumn<Property>[] = [
+    {
+      key: "property",
+      header: "Property",
+      width: "flex-[2]",
+      render: (property) => (
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+            <img
+              src={property.images[0] || "/placeholder.svg"}
+              alt={property.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="font-medium text-foreground truncate">{property.title}</div>
+            <div className="flex items-center text-sm text-muted-foreground mt-1">
+              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="truncate">{property.location}</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "details",
+      header: "Details",
+      width: "w-48",
+      render: (property) => (
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+          <div className="flex items-center">
+            <Bed className="h-3 w-3 mr-1" />
+            <span>{property.bedrooms}</span>
+          </div>
+          <div className="flex items-center">
+            <Bath className="h-3 w-3 mr-1" />
+            <span>{property.bathrooms}</span>
+          </div>
+          <div className="flex items-center">
+            <Square className="h-3 w-3 mr-1" />
+            <span>{property.area} sq ft</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      width: "w-32",
+      render: (property) => <Badge variant={getStatusBadgeVariant(property.status)}>{property.status}</Badge>,
+    },
+  ]
+
+  const tableFilters: DataTableFilter[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      value: filters.status,
+      options: [
+        { value: "Available", label: "Available" },
+        { value: "Occupied", label: "Occupied" },
+        { value: "Maintenance", label: "Maintenance" },
+      ],
+    },
+    {
+      key: "bedrooms",
+      label: "Bedrooms",
+      type: "select",
+      value: filters.bedrooms,
+      options: [
+        { value: "0", label: "Studio" },
+        { value: "1", label: "1 Bedroom" },
+        { value: "2", label: "2 Bedrooms" },
+        { value: "3", label: "3 Bedrooms" },
+        { value: "4", label: "4+ Bedrooms" },
+      ],
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
-        
-          <PageHeader
-            title="Properties"
-            description="Manage property owners and partnerships"
-            buttonText="Add Property"
-            buttonIcon={Plus}
-            onButtonClick={handleAddProperty}
-          />
+        <PageHeader
+          title="Properties"
+          description="Manage property owners and partnerships"
+          buttonText="Add Property"
+          buttonIcon={Plus}
+          onButtonClick={handleAddProperty}
+        />
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search properties by name or location..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-background border-border text-foreground placeholder:text-muted-foreground"
-          />
-        </div>
-
-        {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProperties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredProperties.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No properties found matching your search.</p>
-          </div>
-        )}
+        {/* Data Table */}
+        <DataTable
+          data={mockProperties}
+          columns={columns}
+          searchable={true}
+          searchPlaceholder="Search properties by name or location..."
+          selectable={true}
+          onRowClick={handleRowClick}
+          emptyMessage="No properties found"
+          emptyDescription="No properties match your current search and filters."
+          filters={tableFilters}
+          onFilterChange={handleFilterChange}
+          onExport={() => {
+            console.log("Export properties")
+          }}
+          onShare={() => {
+            console.log("Share properties")
+          }}
+          onViewsClick={() => {
+            console.log("Manage views")
+          }}
+          onSaveView={() => {
+            console.log("Save current view")
+          }}
+        />
       </div>
     </div>
   )

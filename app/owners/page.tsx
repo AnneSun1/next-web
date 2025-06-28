@@ -247,37 +247,37 @@ export default function OwnersPage() {
       width: "w-32",
       render: (owner) => getStatusBadge(owner.status),
     },
-    {
-      key: "actions",
-      header: "Actions",
-      width: "w-24",
-      render: (owner) => (
-        <div className="flex items-center space-x-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              console.log("View owner:", owner.id)
-            }}
-            className="h-8 w-8 p-0 hover:bg-accent"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              console.log("Edit owner:", owner.id)
-            }}
-            className="h-8 w-8 p-0 hover:bg-accent"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
+    // {
+    //   key: "actions",
+    //   header: "Actions",
+    //   width: "w-24",
+    //   render: (owner) => (
+    //     <div className="flex items-center space-x-1">
+    //       <Button
+    //         variant="ghost"
+    //         size="sm"
+    //         onClick={(e) => {
+    //           e.stopPropagation()
+    //           console.log("View owner:", owner.id)
+    //         }}
+    //         className="h-8 w-8 p-0 hover:bg-accent"
+    //       >
+    //         <Eye className="h-4 w-4" />
+    //       </Button>
+    //       <Button
+    //         variant="ghost"
+    //         size="sm"
+    //         onClick={(e) => {
+    //           e.stopPropagation()
+    //           console.log("Edit owner:", owner.id)
+    //         }}
+    //         className="h-8 w-8 p-0 hover:bg-accent"
+    //       >
+    //         <Edit className="h-4 w-4" />
+    //       </Button>
+    //     </div>
+    //   ),
+    // },
   ]
 
   const handleSelectionChange = (selectedIds: string[]) => {
